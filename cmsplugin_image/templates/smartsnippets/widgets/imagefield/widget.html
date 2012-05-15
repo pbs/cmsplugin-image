@@ -3,6 +3,9 @@
     var field_name = '{{ field.name }}';
 </script>
 <tr>
+    <td class="error_{{field_name}}" colspan="2"></td>
+</tr>
+<tr>
     <td><label for="var_{{ field.name }}">{{ field.name }}</label></td>
     <td><input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100"/>
         <a href="/admin/filer/folder/" class="related-lookup" id="lookup_id_image" title="Lookup" onclick="return showRelatedObjectLookupPopup(this);">
