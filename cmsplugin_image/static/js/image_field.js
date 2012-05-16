@@ -15,9 +15,9 @@ function showRelatedObjectLookupPopup(triggeringLink) {
     name = id_to_windowname(name);
     var href;
     if (triggeringLink.href.search(/\?/) >= 0) {
-	href = triggeringLink.href + '&pop=1';
+    	href = triggeringLink.href + '&pop=1';
     } else {
-	href = triggeringLink.href + '?pop=1';
+	    href = triggeringLink.href + '?pop=1';
     }
     var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
     win.focus();
@@ -26,6 +26,7 @@ function showRelatedObjectLookupPopup(triggeringLink) {
 
 dismissRelatedImageLookupPopup = function(win, chosenId, chosenThumbnailUrl, chosenDescriptionTxt) {
     win.close();
+
     var jxhr = $.ajax({
                 url: "/imagefield/get_file/",
                 data: {'id': chosenId},
@@ -33,12 +34,13 @@ dismissRelatedImageLookupPopup = function(win, chosenId, chosenThumbnailUrl, cho
                     //add before send logic here if required
                 },
                 success: function(data){
-		    if (data){
+                    if (data){
                         document.getElementById('var_'+field_name).value = data;
-		    }
-		    else{
-			$(".error_"+field_name).html('Please select a valid image type');
-		    }
+                        $(".error_"+field_name).html('');
+                    }
+                    else{
+                        $(".error_"+field_name).html('Please select a valid image type');
+                    }
                 },
                 error: function(data){
                     alert('error');
@@ -49,3 +51,18 @@ dismissRelatedImageLookupPopup = function(win, chosenId, chosenThumbnailUrl, cho
             });
         return jxhr;
 };
+
+
+$(document).ready(function(){
+   $("form#smartsnippetpointer_form").submit(function(){
+       var is_valid = true;
+       $("input.filer_image_url").each(function(val) {
+           if ($(this).val()==''){
+               is_valid = false;
+               var elem = $(this).attr('id').substr(4, -1);
+               $(elem).html('Please select a valid image type');
+           }
+       });
+       return is_valid;
+   }) ;
+});
