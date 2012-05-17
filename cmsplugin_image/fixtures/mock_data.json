@@ -1,0 +1,91 @@
+[
+
+    {
+        "pk": 1,
+        "model": "filer.file",
+        "fields": {
+            "sha1": "7d97e98f8af710c7e7fe703abc8f639e0ee507c4",
+            "original_filename": "test.txt",
+            "name": "",
+            "description": "",
+            "modified_at": "2012-05-15 18:00:53",
+            "_file_size": 5,
+            "uploaded_at": "2012-05-15 12:13:00",
+            "file": "filer_public/2012/05/15/test.txt",
+            "owner": 1,
+            "is_public": true,
+            "folder": null,
+            "has_all_mandatory_data": false,
+            "polymorphic_ctype": 33
+        }
+    },
+    {
+        "pk": 2,
+        "model": "filer.file",
+        "fields": {
+            "sha1": "2d6c1c0dbc1d37ed8b129170b2dcfc0ee26df125",
+            "original_filename": "images.jpg",
+            "name": "",
+            "description": "",
+            "modified_at": "2012-05-15 18:00:53",
+            "_file_size": 8709,
+            "uploaded_at": "2012-05-15 15:51:38",
+            "file": "filer_public/2012/05/15/images.jpg",
+            "owner": 1,
+            "is_public": true,
+            "folder": null,
+            "has_all_mandatory_data": false,
+            "polymorphic_ctype": 34
+        }
+    },
+    {
+        "pk": 3,
+        "model": "filer.file",
+        "fields": {
+            "sha1": "44ff55da23ef11ac7642f3b02e03a30d2a50f70b",
+            "original_filename": "vector_bitmap_image.png",
+            "name": "",
+            "description": "",
+            "modified_at": "2012-05-15 18:00:53",
+            "_file_size": 14351,
+            "uploaded_at": "2012-05-15 15:57:21",
+            "file": "filer_public/2012/05/15/vector_bitmap_image.png",
+            "owner": 1,
+            "is_public": true,
+            "folder": null,
+            "has_all_mandatory_data": false,
+            "polymorphic_ctype": 34
+        }
+    },
+    {
+        "pk": 2,
+        "model": "filer.image",
+        "fields": {
+            "subject_location": "",
+            "must_always_publish_copyright": false,
+            "date_taken": "2012-05-15 15:51:38",
+            "author": "",
+            "_height": 252,
+            "_width": 200,
+            "must_always_publish_author_credit": false,
+            "default_alt_text": "",
+            "default_caption": ""
+        }
+    },
+    {
+        "pk": 3,
+        "model": "filer.image",
+        "fields": {
+            "subject_location": "",
+            "must_always_publish_copyright": false,
+            "date_taken": "2012-05-15 15:57:21",
+            "author": "",
+            "_height": 343,
+            "_width": 394,
+            "must_always_publish_author_credit": false,
+            "default_alt_text": "",
+            "default_caption": ""
+        }
+    },
+
+]
