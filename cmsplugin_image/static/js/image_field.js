@@ -1,3 +1,6 @@
+// Holds the current image field name
+var image_field_name = '';
+
 function id_to_windowname(text) {
     text = text.replace(/\./g, '__dot__');
     text = text.replace(/\-/g, '__dash__');
@@ -10,7 +13,8 @@ function windowname_to_id(text) {
     return text;
 }
 
-function showRelatedObjectLookupPopup(triggeringLink) {
+function showRelatedObjectLookupPopup(triggeringLink, field_name) {
+    image_field_name = field_name;
     var name = triggeringLink.id.replace(/^lookup_/, '');
     name = id_to_windowname(name);
     var href;
@@ -26,42 +30,36 @@ function showRelatedObjectLookupPopup(triggeringLink) {
 
 dismissRelatedImageLookupPopup = function(win, chosenId, chosenThumbnailUrl, chosenDescriptionTxt) {
     win.close();
-
-    var jxhr = $.ajax({
-                url: "/imagefield/get_file/",
+    var jxhr = jQuery.ajax({
+                url: filer_image_url,
                 data: {'id': chosenId},
-                beforeSend: function(xhr){
-                    //add before send logic here if required
-                },
                 success: function(data){
-                    if (data){
-                        document.getElementById('var_'+field_name).value = data;
-                        $(".error_"+field_name).html('');
+                    if (data.url){
+			jQuery("td.invalid_image").html('');
+                        jQuery('#var_'+image_field_name).val(data.url);
                     }
                     else{
-                        $(".error_"+field_name).html('Please select a valid image type');
+                        jQuery("td.error_"+image_field_name).html('Please select a valid image type.');
                     }
                 },
                 error: function(data){
-                    alert('error');
-                },
-                complete: function(data){
-
+                    alert('Error retrieving file information.');
                 }
             });
         return jxhr;
 };
 
 
-$(document).ready(function(){
-   $("form#smartsnippetpointer_form").submit(function(){
+jQuery(document).ready(function(){
+   jQuery("form#smartsnippetpointer_form").submit(function(){
        var is_valid = true;
-       $("input.filer_image_url").each(function(val) {
-           if ($(this).val()==''){
+       jQuery("td.invalid_image").html('');
+       jQuery("input.filer_image_url").each(function(val) {
+            if (jQuery(this).val()==''){
                is_valid = false;
-               var elem = $(this).attr('id').substr(4, -1);
-               $(elem).html('Please select a valid image type');
-           }
+	       image_field_name = jQuery(this).attr('id').replace('var_', '');
+               jQuery('td.error_'+image_field_name).html('Please select a valid image type.');
+            }
        });
        return is_valid;
    }) ;

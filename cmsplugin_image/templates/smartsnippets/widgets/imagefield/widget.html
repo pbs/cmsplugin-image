@@ -1,15 +1,15 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/style.css"/>
 <script type="text/javascript" src="{{ STATIC_URL }}js/image_field.js"></script>
 <script type="text/javascript">
-    var field_name = '{{ field.name }}';
+    var filer_image_url = "{% url cmsplugin_image.views.get_file %}";
 </script>
 <tr>
     <td class="error_{{ field.name }} invalid_image" colspan="2"></td>
 </tr>
 <tr>
     <td><label for="var_{{ field.name }}">{{ field.name }}</label></td>
-    <td><input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100" class="filer_image_url"/>
-        <a href="/admin/filer/folder/" class="related-lookup" id="lookup_id_image" title="Lookup" onclick="return showRelatedObjectLookupPopup(this);">
+    <td><input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100" class="filer_image_url" />
+        <a href="{% url admin:filer_folder_changelist %}" class="related-lookup" id="lookup_id_image" title="Lookup" onclick="return showRelatedObjectLookupPopup(this, '{{ field.name }}');">
             <img src="{{ STATIC_URL }}admin/img/admin/selector-search.gif" width="16" height="16" alt="Lookup">
         </a>
     </td>

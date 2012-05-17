@@ -13,11 +13,13 @@ except:
 def get_file(request):
     if not request.is_ajax():
         return HttpResponseForbidden()
+    result = {}
     file_id = request.GET.get('id');
     try:
         file = File.objects.get(pk=file_id)
     except File.DoesNotExist:
         file = None
-    if file and file.__class__ == Image:
-        return HttpResponse(json.dumps(file.file.url), mimetype="application/json")
-    return HttpResponse(json.dumps(None), mimetype="application/json")
+
+    result['url'] = file.file.url if file and file.__class__ == Image else ''
+
+    return HttpResponse(json.dumps(result), mimetype="application/json")
