@@ -1,10 +1,10 @@
-import unittest
+from django.test import TestCase
 from django.test.client import Client
-from filer.models import File, Folder
+from filer.models import File
 import ast
 from django.contrib.auth.models import User
 
-class TestFile(unittest.TestCase):
+class TestFile(TestCase):
 
     fixtures = ['mock_data.json' ]
 
@@ -18,12 +18,16 @@ class TestFile(unittest.TestCase):
             user = None
         if not user:
             self.mock_user = User.objects.create_superuser(username='mock_user_%$#!_1234', password='mock', email='mock@mock.com')
+        else:
+            self.mock_user = user
         if not self.logged_in:
             self.logged_in = self.client.login(username='mock_user_%$#!_1234', password='mock')
 
     def tearDown(self):
         if self.mock_user:
-            self.mock_user.delete()
+            self.logged_in = (not self.client.logout())
+            #self.mock_user.delete()
+        super(TestFile, self).tearDown()
 
     def assertContent(self,  _file, _expected_result):
         if not self.logged_in:
