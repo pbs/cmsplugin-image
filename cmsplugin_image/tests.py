@@ -32,16 +32,31 @@ class TestFile(TestCase):
             self.assertEqual(content_dict.get('url', ''), _expected_result)
 
     def test_txt(self):
-        file = File.objects.get(pk=1)
-        self.assertContent(file, '')
+        try:
+            file = File.objects.get(pk=1)
+            self.assertContent(file, '')
+        except File.DoesNotExist:
+            self.fail("File does not exist.")
+        except Exception, e:
+            self.fail("Fixture is not loaded properly.")
 
 
     def test_png(self):
-        file = File.objects.get(pk=2)
-        self.assertContent(file, file.file.url)
+        try:
+            file = File.objects.get(pk=2)
+            self.assertContent(file, file.file.url)
+        except File.DoesNotExist:
+            self.fail("File does not exist.")
+        except Exception, e:
+            self.fail("Fixture is not loaded properly.")
 
 
     def test_jpeg(self):
-        file = File.objects.get(pk=3)
-        self.assertContent(file, file.file.url)
+        try:
+            file = File.objects.get(pk=3)
+            self.assertContent(file, file.file.url)
+        except File.DoesNotExist:
+            self.fail("File does not exist.")
+        except Exception, e:
+            self.fail("Fixture is not loaded properly.")
 
