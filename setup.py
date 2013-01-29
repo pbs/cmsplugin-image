@@ -6,7 +6,7 @@ README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)),
 
 setup(
     name='cmsplugin-image',
-    version='0.0.2',
+    version='0.0.3',
     description='PBS Image Field type for Django CMS',
     long_description = open(README_PATH, 'r').read(),
     author='PBS Audience Facing Team',
