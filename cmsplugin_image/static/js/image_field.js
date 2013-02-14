@@ -61,9 +61,18 @@ jQuery(document).ready(function(){
        var is_valid = true;
        jQuery("td.invalid_image").html('');
        jQuery("input.filer_image_url").each(function(val) {
-            if (jQuery(this).val()=='' || !is_validURL(jQuery(this).val())){
+
+            image_field_name = jQuery(this).attr('id').replace('var_', '');
+            var fieldValue = jQuery(this).val();
+
+            var optionalField = false;
+            if (jQuery(this).siblings("[name='_opt_"+ image_field_name +"']").length){
+                optionalField = true;
+                if (fieldValue === ''){ return; }
+            }
+
+            if ((optionalField && !is_validURL(fieldValue)) || fieldValue==='' || !is_validURL(fieldValue)){
                 is_valid = false;
-	            image_field_name = jQuery(this).attr('id').replace('var_', '');
                 jQuery('td.error_'+image_field_name).html('Please select a valid image type.');
             }
        });
