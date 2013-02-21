@@ -66,7 +66,7 @@ jQuery(document).ready(function(){
             var fieldValue = jQuery(this).val();
 
             var optionalField = false;
-            if (jQuery(this).siblings("[name='_opt_"+ image_field_name +"']").length){
+            if (jQuery(this).hasClass('optional')){
                 optionalField = true;
                 if (fieldValue === ''){ return; }
             }
