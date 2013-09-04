@@ -19,7 +19,7 @@ function windowname_to_id(text) {
     return text;
 }
 
-function showRelatedObjectLookupPopup(triggeringLink, field_name) {
+function showRelatedObjectLookupPopupImgField(triggeringLink, field_name) {
     image_field_name = field_name;
     var name = triggeringLink.id.replace(/^lookup_/, '');
     name = id_to_windowname(name);
@@ -31,10 +31,15 @@ function showRelatedObjectLookupPopup(triggeringLink, field_name) {
     }
     var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
     win.focus();
+
+    // In case the SmartSnippet has both image and merlin fields, the request to
+    //  opener.dismissRelatedImageLookupPopup should go to the right function
+    window.dismissRelatedImageLookupPopup = dismissRelatedImageLookupPopupImgField
+
     return false;
 }
 
-dismissRelatedImageLookupPopup = function(win, chosenId, chosenThumbnailUrl, chosenDescriptionTxt) {
+dismissRelatedImageLookupPopupImgField = function(win, chosenId, chosenThumbnailUrl, chosenDescriptionTxt) {
     win.close();
     var jxhr = jQuery.ajax({
                 url: filer_image_url,
