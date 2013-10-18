@@ -27,7 +27,7 @@ function showRelatedObjectLookupPopupImgField(triggeringLink, field_name) {
     if (triggeringLink.href.search(/\?/) >= 0) {
     	href = triggeringLink.href + '&pop=1';
     } else {
-	    href = triggeringLink.href + '?pop=1';
+	    href = triggeringLink.href + '?pop=1&size_set_id=1';
     }
     var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
     win.focus();
