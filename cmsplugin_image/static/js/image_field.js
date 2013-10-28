@@ -19,16 +19,13 @@ function windowname_to_id(text) {
     return text;
 }
 
-function showRelatedObjectLookupPopupImgField(triggeringLink, field_name) {
+function showRelatedObjectLookupPopupImgField(triggeringLink, field_name, size_set_id) {
     image_field_name = field_name;
     var name = triggeringLink.id.replace(/^lookup_/, '');
     name = id_to_windowname(name);
-    var href;
-    if (triggeringLink.href.search(/\?/) >= 0) {
-    	href = triggeringLink.href + '&pop=1';
-    } else {
-	    href = triggeringLink.href + '?pop=1&size_set_id=1';
-    }
+    var arg_delimiter = (triggeringLink.href.search(/\?/) >= 0) ? '': '?';
+    var size_set_arg = size_set_id ? '&size_set_id=' + size_set_id : '';
+    href = triggeringLink.href + arg_delimiter + 'pop=1' + size_set_arg;
     var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
     win.focus();
 
@@ -50,7 +47,7 @@ dismissRelatedImageLookupPopupImgField = function(win, chosenId, chosenThumbnail
                         jQuery('#var_'+image_field_name).val(data.url);
                     }
                     else{
-                        jQuery("td.error_"+image_field_name).html('Please select a valid image type.');
+                        jQuery("td.error_"+image_field_name).html('Error retrieving file information.');
                     }
                 },
                 error: function(data){
