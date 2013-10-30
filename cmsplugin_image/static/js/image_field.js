@@ -19,13 +19,17 @@ function windowname_to_id(text) {
     return text;
 }
 
-function showRelatedObjectLookupPopupImgField(triggeringLink, field_name, size_set_id) {
+function showRelatedObjectLookupPopupImgField(triggeringLink, field_name, size_set_id_param) {
+    size_set_id = size_set_id_param;
     image_field_name = field_name;
     var name = triggeringLink.id.replace(/^lookup_/, '');
     name = id_to_windowname(name);
-    var arg_delimiter = (triggeringLink.href.search(/\?/) >= 0) ? '': '?';
-    var size_set_arg = size_set_id ? '&size_set_id=' + size_set_id : '';
-    href = triggeringLink.href + arg_delimiter + 'pop=1' + size_set_arg;
+    var href;
+    if (triggeringLink.href.search(/\?/) >= 0) {
+            href = triggeringLink.href + '&pop=1';
+    } else {
+            href = triggeringLink.href + '?pop=1';
+    }
     var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
     win.focus();
 
@@ -38,6 +42,19 @@ function showRelatedObjectLookupPopupImgField(triggeringLink, field_name, size_s
 
 dismissRelatedImageLookupPopupImgField = function(win, chosenId, chosenThumbnailUrl, chosenDescriptionTxt) {
     win.close();
+    if (cropduster_url && size_set_id) {
+        // open cropduster window
+        var url = cropduster_url + "?size_set=" + size_set_id + "&next_stage=crop_images&image=" + chosenId;
+        var new_win = window.open(url, '', 'height=500,width=800,resizable=yes,scrollbars=yes');
+        new_win.dismissRelatedImageLookupPopup = cropdusterDismiss;
+        new_win.focus();
+    } else {
+        defaultDismiss(chosenId);
+    }
+    return false;
+};
+
+function defaultDismiss(chosenId) {
     var jxhr = jQuery.ajax({
                 url: filer_image_url,
                 data: {'id': chosenId},
@@ -47,16 +64,21 @@ dismissRelatedImageLookupPopupImgField = function(win, chosenId, chosenThumbnail
                         jQuery('#var_'+image_field_name).val(data.url);
                     }
                     else{
-                        jQuery("td.error_"+image_field_name).html('Error retrieving file information.');
+                        jQuery("td.error_"+image_field_name).html('Please select a valid image type.');
                     }
                 },
                 error: function(data){
                     alert('Error retrieving file information.');
                 }
             });
-        return jxhr;
-};
+    return jxhr;
+}
 
+function cropdusterDismiss(win, chosenId, chosenThumbnailUrl, chosenDescriptionTxt){
+    win.close();
+    defaultDismiss(chosenId);
+    return false;
+}
 
 jQuery(document).ready(function(){
    jQuery("form#smartsnippetpointer_form").submit(function(){

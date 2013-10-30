@@ -1,6 +1,8 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/style.css"/>
 <script type="text/javascript">
     var filer_image_url = "{% url cmsplugin_image.views.get_file %}";
+    var cropduster_url = "{{ cropduster_url }}";
+    var size_set_id;
 </script>
 <script type="text/javascript" src="{{ STATIC_URL }}js/image_field.js"></script>
 <tr>
