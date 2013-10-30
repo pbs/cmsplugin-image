@@ -19,15 +19,16 @@ function windowname_to_id(text) {
     return text;
 }
 
-function showRelatedObjectLookupPopupImgField(triggeringLink, field_name) {
+function showRelatedObjectLookupPopupImgField(triggeringLink, field_name, size_set_id_param) {
+    size_set_id = size_set_id_param;
     image_field_name = field_name;
     var name = triggeringLink.id.replace(/^lookup_/, '');
     name = id_to_windowname(name);
     var href;
     if (triggeringLink.href.search(/\?/) >= 0) {
-    	href = triggeringLink.href + '&pop=1';
+            href = triggeringLink.href + '&pop=1';
     } else {
-	    href = triggeringLink.href + '?pop=1';
+            href = triggeringLink.href + '?pop=1';
     }
     var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
     win.focus();
@@ -41,6 +42,19 @@ function showRelatedObjectLookupPopupImgField(triggeringLink, field_name) {
 
 dismissRelatedImageLookupPopupImgField = function(win, chosenId, chosenThumbnailUrl, chosenDescriptionTxt) {
     win.close();
+    if (cropduster_url && size_set_id) {
+        // open cropduster window
+        var url = cropduster_url + "?size_set=" + size_set_id + "&next_stage=crop_images&image=" + chosenId;
+        var new_win = window.open(url, '', 'height=500,width=800,resizable=yes,scrollbars=yes');
+        new_win.dismissRelatedImageLookupPopup = cropdusterDismiss;
+        new_win.focus();
+    } else {
+        defaultDismiss(chosenId);
+    }
+    return false;
+};
+
+function defaultDismiss(chosenId) {
     var jxhr = jQuery.ajax({
                 url: filer_image_url,
                 data: {'id': chosenId},
@@ -57,9 +71,14 @@ dismissRelatedImageLookupPopupImgField = function(win, chosenId, chosenThumbnail
                     alert('Error retrieving file information.');
                 }
             });
-        return jxhr;
-};
+    return jxhr;
+}
 
+function cropdusterDismiss(win, chosenId, chosenThumbnailUrl, chosenDescriptionTxt){
+    win.close();
+    defaultDismiss(chosenId);
+    return false;
+}
 
 jQuery(document).ready(function(){
    jQuery("form#smartsnippetpointer_form").submit(function(){
