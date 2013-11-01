@@ -30,6 +30,9 @@ function showRelatedObjectLookupPopupImgField(triggeringLink, field_name, size_s
     } else {
             href = triggeringLink.href + '?pop=1';
     }
+    if (typeof current_site !== 'undefined' && current_site == parseInt(current_site)){
+        href += '&current_site=' + current_site
+    }
     var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
     win.focus();
 
