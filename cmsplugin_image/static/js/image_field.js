@@ -58,12 +58,11 @@ function defaultDismiss(chosenId) {
     var jxhr = jQuery.ajax({
                 url: filer_image_url,
                 data: {'id': chosenId},
-                success: function(data){
-                    if (data.url){
-			jQuery("td.invalid_image").html('');
+                success: function(data) {
+                    if (data.url) {
+			            jQuery("td.invalid_image").html('');
                         jQuery('#var_'+image_field_name).val(data.url);
-                    }
-                    else{
+                    } else {
                         jQuery("td.error_"+image_field_name).html('Please select a valid image type.');
                     }
                 },
