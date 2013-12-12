@@ -1,15 +1,285 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/style.css"/>
+<canvas id="imgCanvas" width="600" height="400"
+        style="border: 1px solid #d3d3d3; background:url('{{ field.value }}');background-size:600px 400px; background-repeat:no-repeat;">
+    <strong>Your browser does not support HTML5 canvas</strong>
+</canvas>
 <script type="text/javascript">
     var filer_image_url = "{% url cmsplugin_image.views.get_file %}";
+
+	// the main box (rectangle) which is used to perform the cropping; this box can be dragged and resized
+	var theBox = { x:0, y:0, w:50, h:50 }
+
+	// reflects whether we are currently dragging the box
+	var dragging = false
+	var resizing = false
+
+	// the point where the box was first clicked, in order not to change the relative distance between the mouse and the object
+	var dragHoldX
+	var dragHoldY
+
+	// some constants which reflect what side(s) of the box is(are) being resized
+	var CORNER_TOP_LEFT = 0
+	var CORNER_TOP_RIGHT = 1
+	var CORNER_BOTTOM_LEFT = 2
+	var CORNER_BOTTOM_RIGHT = 3
+	var EDGE_TOP = 4
+	var EDGE_BOTTOM = 5
+	var EDGE_LEFT = 6
+	var EDGE_RIGHT = 7
+	var RESIZING_NONE = -1
+
+	// maximum distance (in pixels) between box edge and mouse position for considering to perform a box resize
+	var THRES = 5
+
+	var resizingSide = RESIZING_NONE // this keeps track of how we resize the box: top, bottom, edge, etc
+
+	// message to be displayed when doing operations (for debug purposes)
+	var message = ''
+
+	function paint(canvas) {
+		ctx = canvas.getContext('2d')
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		ctx.globalAlpha = 0.6;
+		ctx.strokeStyle = "#000000"
+		ctx.lineWidth = THRES
+		ctx.strokeRect(theBox.x - 1, theBox.y - 1, theBox.w + 1, theBox.h + 1)
+		ctx.globalAlpha = 0.15
+		ctx.fillStyle = "red"
+		ctx.fillRect(theBox.x, theBox.y, theBox.w, theBox.h)
+		ctx.globalAlpha = 1.0;
+		ctx.font = '12pt Consolas';
+		ctx.fillStyle = 'black';
+		ctx.fillText(message, 10, 25);
+	}
+
+	// checks whether the mouse is inside the selected rectangle
+	function isMouseInsideBox(mouseX, mouseY) {
+		if (mouseX < (theBox.x + THRES) || mouseY < (theBox.y + THRES))
+			return false
+		if (mouseX > (theBox.x + theBox.w - THRES) || mouseY > (theBox.y + theBox.h - THRES))
+			return false
+		return true
+	}
+
+	// checks whether the mouse is aproximately on the edge of the rectangle
+	function isMouseOnTheEdge(mouseX, mouseY) {
+		var topAxis = 	((Math.abs(mouseY - theBox.y) < THRES) && (mouseX >= (theBox.x - THRES)) && (mouseX <= (theBox.x + theBox.w + THRES)))
+		var leftAxis = 	((Math.abs(mouseX - theBox.x) < THRES) && (mouseY >= (theBox.y - THRES)) && (mouseY <= (theBox.y + theBox.h + THRES)))
+		var bottomAxis= ((Math.abs(mouseY - theBox.y - theBox.h) < THRES) && (mouseX >= (theBox.x - THRES)) && (mouseX <= (theBox.x + theBox.w + THRES)))
+		var rightAxis = ((Math.abs(mouseX - theBox.x - theBox.w) < THRES) && (mouseY >= (theBox.y - THRES)) && (mouseY <= (theBox.y + theBox.h + THRES)))
+
+		if (topAxis && leftAxis) {
+			resizingSide = CORNER_TOP_LEFT
+			return true
+		}
+		if (topAxis && rightAxis) {
+			resizingSide = CORNER_TOP_RIGHT
+			return true
+		}
+		if (bottomAxis && leftAxis) {
+			resizingSide = CORNER_BOTTOM_LEFT
+			return true
+		}
+		if (bottomAxis && rightAxis) {
+			resizingSide = CORNER_BOTTOM_RIGHT
+			return true
+		}
+		if (topAxis) {
+			resizingSide = EDGE_TOP
+			return true
+		}
+		if (bottomAxis) {
+			resizingSide = EDGE_BOTTOM
+			return true
+		}
+		if (leftAxis) {
+			resizingSide = EDGE_LEFT
+			return true
+		}
+		if (rightAxis) {
+			resizingSide = EDGE_RIGHT
+			return true
+		}
+		resizingSide = RESIZING_NONE
+		return false
+	}
+
+	// the initial state of our "state machine"
+	function mouseDownHandler(evt) {
+		var canvas=document.getElementById("imgCanvas")
+		var mousePos = getMousePos(canvas, evt)
+		if (isMouseInsideBox(mousePos.x, mousePos.y)) {
+			dragging = true
+			dragHoldX = mousePos.x - theBox.x;
+			dragHoldY = mousePos.y - theBox.y;
+			window.addEventListener("mousemove", dragHandler, false);
+		}
+		else if (isMouseOnTheEdge(mousePos.x, mousePos.y)) {
+			resizing = true;
+			window.addEventListener("mousemove", resizeHandler, false);
+		}
+		canvas.removeEventListener("mousedown", mouseDownHandler, false);
+		window.addEventListener("mouseup", mouseUpHandler, false);
+
+		//code below prevents the mouse down from having an effect on the main browser window:
+		if (evt.preventDefault) {
+			evt.preventDefault();
+		} //standard
+		else if (evt.returnValue) {
+			evt.returnValue = false;
+		} //older IE
+		return false;
+	}
+
+	// handle the area resizing
+	function resizeHandler(evt) {
+		if (resizingSide == RESIZING_NONE)	// unlikely :)
+			return
+		var canvas=document.getElementById("imgCanvas")
+		mousePos = getMousePos(canvas, evt)
+
+		if (resizingSide == EDGE_TOP) {
+			theBox.h = theBox.h + (theBox.y - mousePos.y)
+			theBox.y = mousePos.y
+		}
+		else if (resizingSide == EDGE_BOTTOM) {
+			theBox.h = mousePos.y - theBox.y
+		}
+		else if (resizingSide == EDGE_LEFT) {
+			theBox.w = theBox.w + (theBox.x - mousePos.x)
+			theBox.x = mousePos.x
+		}
+		else if (resizingSide == EDGE_RIGHT) {
+			theBox.w = mousePos.x - theBox.x
+		}
+
+		else if (resizingSide == CORNER_TOP_LEFT) {
+			theBox.w = theBox.w + (theBox.x - mousePos.x)
+			theBox.x = mousePos.x
+			theBox.h = theBox.h + (theBox.y - mousePos.y)
+			theBox.y = mousePos.y
+		}
+		else if (resizingSide == CORNER_TOP_RIGHT) {
+			theBox.h = theBox.h + (theBox.y - mousePos.y)
+			theBox.y = mousePos.y
+			theBox.w = mousePos.x - theBox.x
+		}
+		else if (resizingSide == CORNER_BOTTOM_LEFT) {
+			theBox.w = theBox.w + (theBox.x - mousePos.x)
+			theBox.x = mousePos.x
+			theBox.h = mousePos.y - theBox.y
+		}
+		else if (resizingSide == CORNER_BOTTOM_RIGHT) {
+			theBox.w = mousePos.x - theBox.x
+			theBox.h = mousePos.y - theBox.y
+		}
+
+		//correctOutOfBounds(canvas)
+		updateMessage()
+		paint(canvas)
+	}
+
+	// handle the 'out-of-bounds' cases: the box must remain inside the canvas
+	function correctOutOfBounds(canvas) {
+		if (theBox.x + theBox.w > canvas.width)
+			theBox.x = canvas.width - theBox.w
+		if (theBox.y + theBox.h > canvas.height)
+			theBox.y = canvas.height - theBox.h
+		if (theBox.x < 0)
+			theBox.x = 0
+		if (theBox.y < 0)
+			theBox.y = 0
+	}
+
+	// handle the area dragging
+	function dragHandler(evt) {
+		var canvas=document.getElementById("imgCanvas")
+		var mousePos = getMousePos(canvas, evt)
+		theBox.x = mousePos.x - dragHoldX
+		theBox.y = mousePos.y - dragHoldY
+
+		correctOutOfBounds(canvas)
+		updateMessage()
+		paint(canvas)
+	}
+
+	// the end state of our state machine
+	function mouseUpHandler(evt) {
+		var canvas=document.getElementById("imgCanvas")
+		message = ''
+		paint(canvas)
+		canvas.addEventListener("mousedown", mouseDownHandler, false)
+		window.removeEventListener("mouseup", mouseUpHandler, false)
+		if (dragging) {
+			window.removeEventListener("mousemove", dragHandler, false)
+		}
+		if (resizing) {
+			window.removeEventListener("mousemove", resizeHandler, false)
+		}
+		dragging = false
+		resizing = false
+	}
+
+	// HELPER FUNCTIONS
+	function updateMessage() {
+		message = 'Pos: ' + theBox.x + ', ' + theBox.y + '  Ratio: ' + (theBox.w / 600.0) * 100.0 + '%, ' + (theBox.h / 400.0) * 100.0 + '%'
+	}
+
+	function init(canvas) {
+        //syncCanvasUrl()
+		theBox.x = canvas.width / 4
+		theBox.y = canvas.height / 4
+		theBox.w = canvas.width / 2
+		theBox.h = canvas.height / 2
+		paint(canvas);
+	}
+
+	// get the current position of the mouse inside the canvas (relative to the canvas)
+	function getMousePos(canvas, evt) {
+		var rect = canvas.getBoundingClientRect();
+		return {
+			x: evt.clientX - rect.left,
+			y: evt.clientY - rect.top
+		};
+	}
+
+    // reload the background image of the canvas to the url caontained in the
+    function syncCanvasUrl() {
+        var url_field = document.getElementById('var_{{ field.name }}')
+        if (url_field != null && url_field != undefined) {
+            var img_url = url_field.value
+            if (img_url != null && img_url != undefined) {
+                var canvas = document.getElementById("imgCanvas")
+				canvas.style.background="url('" + img_url + "')"
+				canvas.style.backgroundRepeat="no-repeat"
+				canvas.style.backgroundSize="600px 400px"
+				canvas.style.backgroundColor="#d3d3d3"
+            } else {
+                url_field.value='{{ field.value }}'
+            }
+        }
+    }
+
+	window.onload = function() {
+		var canvas=document.getElementById("imgCanvas")
+		init(canvas)
+		canvas.addEventListener('mouseDown', mouseDownHandler, false)
+		canvas.addEventListener('mouseup', mouseUpHandler, false)
+	}
+
 </script>
+
 <script type="text/javascript" src="{{ STATIC_URL }}js/image_field.js"></script>
 <tr>
     <td class="error_{{ field.name }} invalid_image" colspan="2"></td>
 </tr>
 <tr>
     <td><label for="var_{{ field.name }}">{{ field.name }}</label></td>
-    <td><input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100" class="filer_image_url{% if optional_field %} optional{% endif %}" />
-        <a href="{% url admin:filer_folder_changelist %}" class="related-lookup" id="lookup_id_image" title="Lookup" onclick="return showRelatedObjectLookupPopupImgField(this, '{{ field.name }}');">
+    <td><input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100"
+               class="filer_image_url{% if optional_field %} optional{% endif %}"
+               oninput="syncCanvasUrl()"/>
+        <a href="{% url admin:filer_folder_changelist %}" class="related-lookup" id="lookup_id_image" title="Lookup"
+           onclick="return showRelatedObjectLookupPopupImgField(this, '{{ field.name }}', '{{ size_set_id }}');">
             <img src="{{ STATIC_URL }}admin/img/admin/selector-search.gif" width="16" height="16" alt="Lookup">
         </a>
         <div class="help">
