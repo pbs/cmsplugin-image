@@ -1,23 +1,50 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/style.css"/>
-<canvas id="imgCanvas" width="600" height="400"
-        style="border: 1px solid #d3d3d3; background:url('{{ field.value }}');background-size:600px 400px; background-repeat:no-repeat;">
-    <strong>Your browser does not support HTML5 canvas</strong>
-</canvas>
+<!--[if lt IE 9]><script type="text/javascript" src="{{STATIC_URL}}/js/excanvas.js"></script><![endif]-->
+<!--[if lt IE 9]><script type="text/javascript" src="{{STATIC_URL}}/js/ie8_event.js"></script><![endif]-->
+
 <script type="text/javascript">
-    var filer_image_url = "{% url cmsplugin_image.views.get_file %}";
+        var filer_image_url = "{% url cmsplugin_image.views.get_file %}"
+        
+	// the main crop_area (rectangle) which is used to perform the cropping; this crop_area can be dragged and resized
+	function crop_area(x, y, w, h) {
+            this.x = x
+            this.y = y
+            this.w = w
+            this.h = h
+            this.old_x = 150
+            this.old_y = 100
+            this.old_w = 300
+            this.old_h = 200
+	}
 
-	// the main box (rectangle) which is used to perform the cropping; this box can be dragged and resized
-	var theBox = { x:0, y:0, w:50, h:50 }
-
-	// reflects whether we are currently dragging the box
-	var dragging = false
-	var resizing = false
-
-	// the point where the box was first clicked, in order not to change the relative distance between the mouse and the object
-	var dragHoldX
-	var dragHoldY
-
-	// some constants which reflect what side(s) of the box is(are) being resized
+	// contains the metadata of a smart snippet variable: canvas, sizes, selection crop_area, etc
+	function ss_variable(field_id, canvas, crop_area, canvas_w, canvas_h, zoom_factor, img) {
+            this.field_id = field_id
+            // the canvas
+            this.canvas = canvas
+            // the crop_area which is drawed inside the canvas (for cropping)
+            this.crop_area = crop_area
+            this.canvas_w = canvas_w
+            this.canvas_h = canvas_h
+            this.zoom_factor = zoom_factor
+            // reflects whether we are currently dragging or resizing the crop_area
+            this.dragging = false
+            this.resizing = false
+            // the point where the crop_area was first clicked for dragging, kept 
+            // in order not to change the relative distance between the mouse and the object
+            this.dragHoldX = 0
+            this.dragHoldY = 0
+            // keeps track of how we resize the crop_area: top, bottom, edge, etc
+            this.resizingSide = RESIZING_NONE
+            // message to be displayed when doing operations
+            this.message = ''
+            this.img = img
+	}
+	
+	// the array which holds all the smart_snippet variables of the snippet
+	var ss_vars
+	
+	// some constants which reflect what side(s) of the crop_area is(are) being resized
 	var CORNER_TOP_LEFT = 0
 	var CORNER_TOP_RIGHT = 1
 	var CORNER_BOTTOM_LEFT = 2
@@ -28,245 +55,393 @@
 	var EDGE_RIGHT = 7
 	var RESIZING_NONE = -1
 
-	// maximum distance (in pixels) between box edge and mouse position for considering to perform a box resize
-	var THRES = 5
+	// maximum distance (in pixels) between crop_area edge and mouse position for considering to perform a crop_area resize
+	var THRES = 10
 
-	var resizingSide = RESIZING_NONE // this keeps track of how we resize the box: top, bottom, edge, etc
-
-	// message to be displayed when doing operations (for debug purposes)
-	var message = ''
-
-	function paint(canvas) {
-		ctx = canvas.getContext('2d')
-		ctx.clearRect(0, 0, canvas.width, canvas.height)
-		ctx.globalAlpha = 0.6;
-		ctx.strokeStyle = "#000000"
-		ctx.lineWidth = THRES
-		ctx.strokeRect(theBox.x - 1, theBox.y - 1, theBox.w + 1, theBox.h + 1)
-		ctx.globalAlpha = 0.15
-		ctx.fillStyle = "red"
-		ctx.fillRect(theBox.x, theBox.y, theBox.w, theBox.h)
-		ctx.globalAlpha = 1.0;
-		ctx.font = '12pt Consolas';
-		ctx.fillStyle = 'black';
-		ctx.fillText(message, 10, 25);
+	function paint(ss_var) {
+            var canvas = ss_var.canvas
+            var ctx = canvas.getContext('2d')
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            ctx.globalAlpha = 1.0
+            ss_var.img.onload = function() {
+                paint(ss_var)
+            }
+            ctx.drawImage(ss_var.img, 0, 0, ss_var.canvas_w, ss_var.canvas_h)
+            ctx.globalAlpha = 0.6
+            ctx.strokeStyle = "#000000"
+            ctx.lineWidth = 4
+            ctx.strokeRect(ss_var.crop_area.x, ss_var.crop_area.y, ss_var.crop_area.w, ss_var.crop_area.h)
+            ctx.globalAlpha = 0.15
+            ctx.fillStyle = "red"
+            ctx.fillRect(ss_var.crop_area.x, ss_var.crop_area.y, ss_var.crop_area.w, ss_var.crop_area.h)
+            // fillText is supported only in IE 11+
+            if (!isIE() || isIE() > 8) {
+                ctx.globalAlpha = 1.0
+                ctx.font = 'bold 11pt Courier'
+                ctx.fillStyle = 'black'
+                ctx.fillText(ss_var.message, 5, 25)
+            }
 	}
 
 	// checks whether the mouse is inside the selected rectangle
-	function isMouseInsideBox(mouseX, mouseY) {
-		if (mouseX < (theBox.x + THRES) || mouseY < (theBox.y + THRES))
-			return false
-		if (mouseX > (theBox.x + theBox.w - THRES) || mouseY > (theBox.y + theBox.h - THRES))
-			return false
-		return true
+	function isMouseInsideBox(crop_area, mouseX, mouseY) {
+            if (mouseX < crop_area.x || mouseY < crop_area.y)
+                return false
+            if (mouseX > (crop_area.x + crop_area.w) || mouseY > (crop_area.y + crop_area.h))
+		return false
+            return true
 	}
 
 	// checks whether the mouse is aproximately on the edge of the rectangle
-	function isMouseOnTheEdge(mouseX, mouseY) {
-		var topAxis = 	((Math.abs(mouseY - theBox.y) < THRES) && (mouseX >= (theBox.x - THRES)) && (mouseX <= (theBox.x + theBox.w + THRES)))
-		var leftAxis = 	((Math.abs(mouseX - theBox.x) < THRES) && (mouseY >= (theBox.y - THRES)) && (mouseY <= (theBox.y + theBox.h + THRES)))
-		var bottomAxis= ((Math.abs(mouseY - theBox.y - theBox.h) < THRES) && (mouseX >= (theBox.x - THRES)) && (mouseX <= (theBox.x + theBox.w + THRES)))
-		var rightAxis = ((Math.abs(mouseX - theBox.x - theBox.w) < THRES) && (mouseY >= (theBox.y - THRES)) && (mouseY <= (theBox.y + theBox.h + THRES)))
-
-		if (topAxis && leftAxis) {
-			resizingSide = CORNER_TOP_LEFT
-			return true
-		}
-		if (topAxis && rightAxis) {
-			resizingSide = CORNER_TOP_RIGHT
-			return true
-		}
-		if (bottomAxis && leftAxis) {
-			resizingSide = CORNER_BOTTOM_LEFT
-			return true
-		}
-		if (bottomAxis && rightAxis) {
-			resizingSide = CORNER_BOTTOM_RIGHT
-			return true
-		}
-		if (topAxis) {
-			resizingSide = EDGE_TOP
-			return true
-		}
-		if (bottomAxis) {
-			resizingSide = EDGE_BOTTOM
-			return true
-		}
-		if (leftAxis) {
-			resizingSide = EDGE_LEFT
-			return true
-		}
-		if (rightAxis) {
-			resizingSide = EDGE_RIGHT
-			return true
-		}
-		resizingSide = RESIZING_NONE
-		return false
+	function isMouseOnTheEdge(crop_area, mouseX, mouseY) {
+            crop_area.x = parseFloat(crop_area.x)
+            crop_area.y = parseFloat(crop_area.y)
+            crop_area.w = parseFloat(crop_area.w)
+            crop_area.h = parseFloat(crop_area.h)
+            var topAxis = ((Math.abs(mouseY - crop_area.y) < THRES) && (mouseX >= (crop_area.x - THRES)) &&
+                (mouseX <= (crop_area.x + crop_area.w + THRES)))
+            var leftAxis = ((Math.abs(mouseX - crop_area.x) < THRES) && (mouseY >= (crop_area.y - THRES)) && 
+                (mouseY <= (crop_area.y + crop_area.h + THRES)))
+            var bottomAxis= ((Math.abs(mouseY - crop_area.y - crop_area.h) < THRES) && (mouseX >= (crop_area.x - THRES)) && 
+                (mouseX <= (crop_area.x + crop_area.w + THRES)))
+            var rightAxis = ((Math.abs(mouseX - crop_area.x - crop_area.w) < THRES) && (mouseY >= (crop_area.y - THRES)) && 
+                (mouseY <= (crop_area.y + crop_area.h + THRES)))
+            if (topAxis && leftAxis)
+                return CORNER_TOP_LEFT
+            if (topAxis && rightAxis) 
+                return CORNER_TOP_RIGHT
+            if (bottomAxis && leftAxis)
+                return CORNER_BOTTOM_LEFT
+            if (bottomAxis && rightAxis)
+                return CORNER_BOTTOM_RIGHT
+            if (topAxis)
+                return EDGE_TOP
+            if (bottomAxis)
+                return EDGE_BOTTOM
+            if (leftAxis)
+                return EDGE_LEFT
+            if (rightAxis)
+                return EDGE_RIGHT
+            return RESIZING_NONE
 	}
 
+	// prevents the mouse down from having an effect on the main browser window
+	function preventDefault(evt) {
+            if (evt.preventDefault)
+                evt.preventDefault()
+            if (evt.stopPropagation)
+                evt.stopPropagation()
+            return false
+	}
+	
 	// the initial state of our "state machine"
 	function mouseDownHandler(evt) {
-		var canvas=document.getElementById("imgCanvas")
-		var mousePos = getMousePos(canvas, evt)
-		if (isMouseInsideBox(mousePos.x, mousePos.y)) {
-			dragging = true
-			dragHoldX = mousePos.x - theBox.x;
-			dragHoldY = mousePos.y - theBox.y;
-			window.addEventListener("mousemove", dragHandler, false);
-		}
-		else if (isMouseOnTheEdge(mousePos.x, mousePos.y)) {
-			resizing = true;
-			window.addEventListener("mousemove", resizeHandler, false);
-		}
-		canvas.removeEventListener("mousedown", mouseDownHandler, false);
-		window.addEventListener("mouseup", mouseUpHandler, false);
-
-		//code below prevents the mouse down from having an effect on the main browser window:
-		if (evt.preventDefault) {
-			evt.preventDefault();
-		} //standard
-		else if (evt.returnValue) {
-			evt.returnValue = false;
-		} //older IE
-		return false;
+            var ss_var = find_ss_var(this.id)
+            var canvas = ss_var.canvas
+            var mousePos = getMousePos(canvas, evt)
+            ss_var.resizingSide = isMouseOnTheEdge(ss_var.crop_area, mousePos.x, mousePos.y)
+            canvas.addEventListener('mousedown', mouseDownHandler, false)
+            
+            if (ss_var.resizingSide != RESIZING_NONE) {
+                ss_var.resizing = true
+                canvas.addEventListener('mousemove', resizeHandler, false)
+                canvas.addEventListener( 'mousemove', resizeHandler)
+            } else if (isMouseInsideBox(ss_var.crop_area, mousePos.x, mousePos.y)) {
+		ss_var.dragging = true
+		ss_var.dragHoldX = mousePos.x - ss_var.crop_area.x
+		ss_var.dragHoldY = mousePos.y - ss_var.crop_area.y
+		canvas.addEventListener('mousemove', dragHandler, false)
+            }
+            canvas.addEventListener('mouseup', mouseUpHandler, false)
+            canvas.removeEventListener('dblclick', maximizeCrop)
+            return preventDefault(evt)
 	}
 
-	// handle the area resizing
+	// handle area resizing
 	function resizeHandler(evt) {
-		if (resizingSide == RESIZING_NONE)	// unlikely :)
-			return
-		var canvas=document.getElementById("imgCanvas")
-		mousePos = getMousePos(canvas, evt)
-
-		if (resizingSide == EDGE_TOP) {
-			theBox.h = theBox.h + (theBox.y - mousePos.y)
-			theBox.y = mousePos.y
-		}
-		else if (resizingSide == EDGE_BOTTOM) {
-			theBox.h = mousePos.y - theBox.y
-		}
-		else if (resizingSide == EDGE_LEFT) {
-			theBox.w = theBox.w + (theBox.x - mousePos.x)
-			theBox.x = mousePos.x
-		}
-		else if (resizingSide == EDGE_RIGHT) {
-			theBox.w = mousePos.x - theBox.x
-		}
-
-		else if (resizingSide == CORNER_TOP_LEFT) {
-			theBox.w = theBox.w + (theBox.x - mousePos.x)
-			theBox.x = mousePos.x
-			theBox.h = theBox.h + (theBox.y - mousePos.y)
-			theBox.y = mousePos.y
-		}
-		else if (resizingSide == CORNER_TOP_RIGHT) {
-			theBox.h = theBox.h + (theBox.y - mousePos.y)
-			theBox.y = mousePos.y
-			theBox.w = mousePos.x - theBox.x
-		}
-		else if (resizingSide == CORNER_BOTTOM_LEFT) {
-			theBox.w = theBox.w + (theBox.x - mousePos.x)
-			theBox.x = mousePos.x
-			theBox.h = mousePos.y - theBox.y
-		}
-		else if (resizingSide == CORNER_BOTTOM_RIGHT) {
-			theBox.w = mousePos.x - theBox.x
-			theBox.h = mousePos.y - theBox.y
-		}
-
-		//correctOutOfBounds(canvas)
-		updateMessage()
-		paint(canvas)
-	}
-
-	// handle the 'out-of-bounds' cases: the box must remain inside the canvas
-	function correctOutOfBounds(canvas) {
-		if (theBox.x + theBox.w > canvas.width)
-			theBox.x = canvas.width - theBox.w
-		if (theBox.y + theBox.h > canvas.height)
-			theBox.y = canvas.height - theBox.h
-		if (theBox.x < 0)
-			theBox.x = 0
-		if (theBox.y < 0)
-			theBox.y = 0
+            var ss_var = find_ss_var(this.id)
+            var canvas = ss_var.canvas
+            var mousePos = getMousePos(ss_var.canvas, evt)
+            correctMousePointerOut(ss_var.canvas, mousePos)
+            var crop_area_x = parseFloat(ss_var.crop_area.x), crop_area_y = parseFloat(ss_var.crop_area.y)
+            var crop_area_w = parseFloat(ss_var.crop_area.w), crop_area_h = parseFloat(ss_var.crop_area.h)
+            
+            switch (ss_var.resizingSide) {
+            case EDGE_TOP:
+                ss_var.crop_area.h = crop_area_h + (crop_area_y - mousePos.y)
+                ss_var.crop_area.y = mousePos.y
+                break
+            case EDGE_BOTTOM:
+                ss_var.crop_area.h = mousePos.y - crop_area_y
+                break
+            case EDGE_LEFT:
+                ss_var.crop_area.w = crop_area_w + (crop_area_x - mousePos.x)
+                ss_var.crop_area.x = mousePos.x
+                break
+            case EDGE_RIGHT:
+                ss_var.crop_area.w = mousePos.x - crop_area_x
+                break
+            case CORNER_TOP_LEFT:
+                ss_var.crop_area.w = crop_area_w + (crop_area_x - mousePos.x)
+                ss_var.crop_area.x = mousePos.x
+                ss_var.crop_area.h = crop_area_h + (crop_area_y - mousePos.y)
+                ss_var.crop_area.y = mousePos.y
+                break
+            case CORNER_TOP_RIGHT:
+                ss_var.crop_area.h = crop_area_h + (crop_area_y - mousePos.y)
+                ss_var.crop_area.y = mousePos.y
+                ss_var.crop_area.w = mousePos.x - crop_area_x
+                break
+            case CORNER_BOTTOM_LEFT:
+                ss_var.crop_area.w = crop_area_w + (crop_area_x - mousePos.x)
+                ss_var.crop_area.x = mousePos.x
+                ss_var.crop_area.h = mousePos.y - crop_area_y
+                break
+            case CORNER_BOTTOM_RIGHT:
+                ss_var.crop_area.w = mousePos.x - crop_area_x
+                ss_var.crop_area.h = mousePos.y - crop_area_y
+                break
+            }
+            updateMessage(ss_var)
+            paint(ss_var)
+            return preventDefault(evt)
 	}
 
 	// handle the area dragging
 	function dragHandler(evt) {
-		var canvas=document.getElementById("imgCanvas")
-		var mousePos = getMousePos(canvas, evt)
-		theBox.x = mousePos.x - dragHoldX
-		theBox.y = mousePos.y - dragHoldY
-
-		correctOutOfBounds(canvas)
-		updateMessage()
-		paint(canvas)
-	}
+            var ss_var = find_ss_var(this.id)
+            var canvas = ss_var.canvas //document.getElementById('var_{{ field.name }}_img_canvas')
+            var mousePos = getMousePos(canvas, evt)
+            ss_var.crop_area.x = mousePos.x - ss_var.dragHoldX
+            ss_var.crop_area.y = mousePos.y - ss_var.dragHoldY
+            correctOutOfBounds(ss_var)
+            updateMessage(ss_var)
+            paint(ss_var)
+            return preventDefault(evt)
+        }
 
 	// the end state of our state machine
 	function mouseUpHandler(evt) {
-		var canvas=document.getElementById("imgCanvas")
-		message = ''
-		paint(canvas)
-		canvas.addEventListener("mousedown", mouseDownHandler, false)
-		window.removeEventListener("mouseup", mouseUpHandler, false)
-		if (dragging) {
-			window.removeEventListener("mousemove", dragHandler, false)
-		}
-		if (resizing) {
-			window.removeEventListener("mousemove", resizeHandler, false)
-		}
-		dragging = false
-		resizing = false
-	}
+            var ss_var = find_ss_var(this.id)
+            var canvas=ss_var.canvas //document.getElementById('var_{{ field.name }}_img_canvas')
+            ss_var.message = ''
+            paint(ss_var)
+            canvas.addEventListener('mousedown', mouseDownHandler)
+            canvas.removeEventListener('mouseup', mouseUpHandler)
+            canvas.addEventListener('dblclick', maximizeCrop)
+            if (ss_var.dragging)
+                canvas.removeEventListener('mousemove', dragHandler)
+            if (ss_var.resizing) {
+                canvas.removeEventListener('mousemove', resizeHandler)
+                resetOrigin(ss_var)  // the user might produce a negative width and height during resize
+            }
+            ss_var.dragging = false
+            ss_var.resizing = false
+            syncCropModel(ss_var)
+            return preventDefault(evt)
+        }
 
-	// HELPER FUNCTIONS
-	function updateMessage() {
-		message = 'Pos: ' + theBox.x + ', ' + theBox.y + '  Ratio: ' + (theBox.w / 600.0) * 100.0 + '%, ' + (theBox.h / 400.0) * 100.0 + '%'
-	}
-
-	function init(canvas) {
-        //syncCanvasUrl()
-		theBox.x = canvas.width / 4
-		theBox.y = canvas.height / 4
-		theBox.w = canvas.width / 2
-		theBox.h = canvas.height / 2
-		paint(canvas);
-	}
-
-	// get the current position of the mouse inside the canvas (relative to the canvas)
-	function getMousePos(canvas, evt) {
-		var rect = canvas.getBoundingClientRect();
-		return {
-			x: evt.clientX - rect.left,
-			y: evt.clientY - rect.top
-		};
-	}
-
-    // reload the background image of the canvas to the url caontained in the
-    function syncCanvasUrl() {
-        var url_field = document.getElementById('var_{{ field.name }}')
-        if (url_field != null && url_field != undefined) {
-            var img_url = url_field.value
-            if (img_url != null && img_url != undefined) {
-                var canvas = document.getElementById("imgCanvas")
-				canvas.style.background="url('" + img_url + "')"
-				canvas.style.backgroundRepeat="no-repeat"
-				canvas.style.backgroundSize="600px 400px"
-				canvas.style.backgroundColor="#d3d3d3"
+        // toggle the crop rectangle: maximum and current size
+        function maximizeCrop(evt) {
+            var ss_var = find_ss_var(this.id)
+            var canvas=ss_var.canvas
+            if (ss_var.crop_area.x == 0 && ss_var.crop_area.y == 0 && ss_var.crop_area.w == canvas.width && ss_var.crop_area.h == canvas.height) {
+                ss_var.crop_area.x = ss_var.crop_area.old_x
+                ss_var.crop_area.y = ss_var.crop_area.old_y
+                ss_var.crop_area.w = ss_var.crop_area.old_w
+                ss_var.crop_area.h = ss_var.crop_area.old_h
             } else {
-                url_field.value='{{ field.value }}'
+                ss_var.crop_area.old_x = ss_var.crop_area.x
+                ss_var.crop_area.old_y = ss_var.crop_area.y
+                ss_var.crop_area.old_w = ss_var.crop_area.w
+                ss_var.crop_area.old_h = ss_var.crop_area.h
+                ss_var.crop_area.x = 0
+                ss_var.crop_area.y = 0
+                ss_var.crop_area.w = canvas.width
+                ss_var.crop_area.h = canvas.height
+            }
+            paint(ss_var)
+            syncCropModel(ss_var)
+            return preventDefault(evt)
+        }
+        
+        // catch oninputchange events on older IE browsers
+        function propertyChangeIE(evt, canvas_id, url_field_id, url_field_id_old) {
+            if (isIE() < 9 && evt.propertyName === 'value') {
+                syncCanvasUrl(canvas_id, url_field_id, url_field_id_old)
             }
         }
-    }
-
-	window.onload = function() {
-		var canvas=document.getElementById("imgCanvas")
-		init(canvas)
-		canvas.addEventListener('mouseDown', mouseDownHandler, false)
-		canvas.addEventListener('mouseup', mouseUpHandler, false)
+        
+        // reload the background image of the canvas to the url contained in the input text denoted by url_field_id
+        function syncCanvasUrl(canvas_id, url_field_id, url_field_id_old) {
+            console.log('sync canvas url')
+            var ss_var = find_ss_var(canvas_id)
+            var url_field = document.getElementById(url_field_id)
+            var url_field_old = document.getElementById(url_field_id_old)
+            url_field_old.value = ss_var.img.src
+            
+            if (url_field != null && url_field != undefined) {
+                var img_url = url_field.value
+                if (img_url != null && img_url != undefined) {
+                    // we need the size of the new image
+                    var new_img = new Image()
+                    new_img.onload = function() {
+                        var img_w = new_img.width
+                        var img_h = new_img.height
+                        if (img_h <= 0 || img_w <= 0) { //unlikely
+                            url_field.value = url_field_old.value
+                            var r = confirm('The URL you entered does not point to a valid image! Please chose another one')
+                            return
+                        }
+                        
+                        var aspect_ratio = (img_w / img_h).toFixed(2)
+                        // resize after width, keep aspect ratio
+                        if (img_w > 600)
+                            ss_var.canvas_w = 600
+                        else
+                            ss_var.canvas_w = img_w
+                        ss_var.canvas_h = (ss_var.canvas_w / aspect_ratio).toFixed(2)
+                        ss_var.zoom_factor = (img_w / ss_var.canvas_w).toFixed(5)
+                        ss_var.canvas.width = ss_var.canvas_w
+                        ss_var.canvas.height = ss_var.canvas_h
+                        ss_var.img.src = img_url
+                        url_field_old.value = url_field.value
+                        ss_var.crop_area.x = 0
+                        ss_var.crop_area.y = 0
+                        ss_var.crop_area.w = ss_var.canvas_w
+                        ss_var.crop_area.h = ss_var.canvas_h
+                        new_img.parentNode.removeChild(new_img)
+                        paint(ss_var.canvas)
+                    }
+                    new_img.onerror = function() {
+                        url_field.value = ss_var.img.src
+                    }
+                    new_img.src = img_url
+                } 
+            }
+        }
+        
+	// SUPPORT FUNCTIONS
+	function updateMessage(ss_var) {
+            if (ss_var.crop_area.w == 0 || ss_var.crop_area.h == 0)
+                return
+            var x = (parseFloat(ss_var.crop_area.x) * ss_var.zoom_factor).toFixed(1)
+            var y = (parseFloat(ss_var.crop_area.y) * ss_var.zoom_factor).toFixed(1)
+            ss_var.message = x + ',' + y + '.Ratio: ' + 
+                Math.abs(((parseFloat(ss_var.crop_area.w) / ss_var.canvas.width) * 100.0).toFixed(2)) + 'x' + 
+                Math.abs(((parseFloat(ss_var.crop_area.h) / ss_var.canvas.height) * 100.0).toFixed(2)) + ' %'
 	}
 
+        function setValue(fld, val) {
+            if (fld != null && fld != undefined) {
+                fld.value = val
+            }
+        }
+	
+	// get the current position of the mouse inside the canvas (relative to the canvas)
+	function getMousePos(canvas, evt) {
+            var rect = canvas.getBoundingClientRect()
+            return {
+		x: Math.floor(evt.clientX - rect.left),
+		y: Math.floor(evt.clientY - rect.top)
+            }
+	}
+
+        // make sure that during resizing the mouse position is limited by the canvas boundaries
+        function correctMousePointerOut(canvas, mousePos) {
+            if (mousePos.x > canvas.width)
+                mousePos.x = canvas.width
+            if (mousePos.y > canvas.height)
+               mousePos.y = canvas.height
+            if (mousePos.x < 0)
+               mousePos.x = 0
+            if (mousePos.y < 0)
+                mousePos.y = 0
+        }
+
+        // handle the 'out-of-bounds' cases: the crop_area must remain inside the canvas
+        function correctOutOfBounds(ss_var) {
+            if (parseFloat(ss_var.crop_area.x) + parseFloat(ss_var.crop_area.w) > ss_var.canvas.width)
+                ss_var.crop_area.x = ss_var.canvas.width - parseFloat(ss_var.crop_area.w)
+            if (parseFloat(ss_var.crop_area.y) + parseFloat(ss_var.crop_area.h) > ss_var.canvas.height)
+                ss_var.crop_area.y = ss_var.canvas.height - parseFloat(ss_var.crop_area.h)
+            if (parseFloat(ss_var.crop_area.x) < 0)
+                ss_var.crop_area.x = 0
+            if (parseFloat(ss_var.crop_area.y) < 0)
+                ss_var.crop_area.y = 0
+        }
+
+        // the width and height can become negative, hence we "reset" the (x,y) origin of the crop_area
+        function resetOrigin(ss_var) {
+            if (ss_var.crop_area.w < 0) {
+                ss_var.crop_area.x = parseFloat(ss_var.crop_area.x) + parseFloat(ss_var.crop_area.w)
+                ss_var.crop_area.w = Math.abs(parseFloat(ss_var.crop_area.w))
+            }
+            if (ss_var.crop_area.h < 0) {
+                ss_var.crop_area.y = parseFloat(ss_var.crop_area.y) + parseFloat(ss_var.crop_area.h)
+                ss_var.crop_area.h = Math.abs(parseFloat(ss_var.crop_area.h))
+            }
+            var h = ss_var.crop_area.h * ss_var.zoom_factor
+            var w = ss_var.crop_area.w * ss_var.zoom_factor
+            if (h < 1)
+                ss_var.crop_area.h = 1.6 / ss_var.zoom_factor
+            if (w < 1)
+                ss_var.crop_area.w = 1.6 / ss_var.zoom_factor
+        }
+        
+        // syncs the hidden fields which will be submitted with ss_var
+        function syncCropModel(ss_var) {
+            setValue(document.getElementById(ss_var.field_id + '_cropx'), (ss_var.crop_area.x * ss_var.zoom_factor).toFixed(2))
+            setValue(document.getElementById(ss_var.field_id + '_cropy'), (ss_var.crop_area.y * ss_var.zoom_factor).toFixed(2))
+            setValue(document.getElementById(ss_var.field_id + '_cropw'), (ss_var.crop_area.w * ss_var.zoom_factor).toFixed(2))
+            setValue(document.getElementById(ss_var.field_id + '_croph'), (ss_var.crop_area.h * ss_var.zoom_factor).toFixed(2))
+        }
+
+        // find the ss_var which holds the canvas with the given id; 
+        // TODO: current html map implementation not production-grade => custom map?
+        function find_ss_var(canvas_id) {
+            var ss_var = ss_vars[0]
+            for (var i = 0; i < ss_vars.length; i++) {
+                if (ss_vars[i].canvas.id == canvas_id) {
+                    ss_var = ss_vars[i]
+                    break
+                }
+            }
+            return ss_var
+        }
+
+        // detects IE 10 and bellow
+        function isIE () {
+            var myNav = navigator.userAgent.toLowerCase();
+            return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : false;
+        }
+        
+        window.onload = function() {
+            var elems = document.getElementsByTagName('canvas')
+            ss_vars = new Array(elems.length)
+            for(var i = 0; i < elems.length; i++) {
+                var canvas = elems[i]
+                var field_id = canvas.id.substring(4, canvas.id.lastIndexOf('_img_canvas'))
+                var zoom_factor = parseFloat(document.getElementById(field_id + '_zoom_factor').value)
+                var canvas_w = parseFloat(document.getElementById(field_id + '_canvas_w').value)
+                var canvas_h = parseFloat(document.getElementById(field_id + '_canvas_h').value)
+                var crop_x = parseFloat(document.getElementById(field_id + '_cropx').value)
+                var crop_y = parseFloat(document.getElementById(field_id + '_cropy').value)
+                var crop_w = parseFloat(document.getElementById(field_id + '_cropw').value)
+                var crop_h = parseFloat(document.getElementById(field_id + '_croph').value)
+                var img = new Image()
+                img.src = document.getElementById(field_id + '_img_url').value
+                var selection_rect = new crop_area((crop_x / zoom_factor).toFixed(2), (crop_y / zoom_factor).toFixed(2), 
+                    (crop_w / zoom_factor).toFixed(2), (crop_h / zoom_factor).toFixed(2))
+                var ss_var = new ss_variable(field_id, canvas, selection_rect, canvas_w, canvas_h, zoom_factor, img)
+                ss_vars[i] = ss_var
+                canvas.addEventListener('mouseDown', mouseDownHandler, false)
+                canvas.addEventListener('mouseup', mouseUpHandler, false)
+                canvas.addEventListener('dblclick', maximizeCrop, false)
+                paint(ss_var)
+            }
+            
+	}
 </script>
 
 <script type="text/javascript" src="{{ STATIC_URL }}js/image_field.js"></script>
@@ -275,13 +450,16 @@
 </tr>
 <tr>
     <td><label for="var_{{ field.name }}">{{ field.name }}</label></td>
-    <td><input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100"
+    <td>
+        <input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100"
                class="filer_image_url{% if optional_field %} optional{% endif %}"
-               oninput="syncCanvasUrl()"/>
+               oninput="syncCanvasUrl('var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"
+               onpropertychange="propertyChangeIE(event, 'var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"/>
         <a href="{% url admin:filer_folder_changelist %}" class="related-lookup" id="lookup_id_image" title="Lookup"
            onclick="return showRelatedObjectLookupPopupImgField(this, '{{ field.name }}', '{{ size_set_id }}');">
             <img src="{{ STATIC_URL }}admin/img/admin/selector-search.gif" width="16" height="16" alt="Lookup">
         </a>
+        <input type="hidden" id="var_{{ field.name }}_old" value="{{ field.value }}"/>
         <div class="help">
             {% if optional_field %}
             Enter an image url, browse the Filer and select one of the available images or just leave it blank.
@@ -291,3 +469,27 @@
         </div>
     </td>
 </tr>
+{% if image_crop and image_size %}
+    <tr>
+        <td>&nbsp;</td>
+        <td>
+            <input type="hidden" value="{{image_crop.crop_x}}" name="{{field.id}}_cropx" id="{{field.id}}_cropx"/>
+            <input type="hidden" value="{{image_crop.crop_y}}" name="{{field.id}}_cropy" id="{{field.id}}_cropy"/>
+            <input type="hidden" value="{{image_crop.crop_w}}" name="{{field.id}}_cropw" id="{{field.id}}_cropw"/>
+            <input type="hidden" value="{{image_crop.crop_h}}" name="{{field.id}}_croph" id="{{field.id}}_croph"/>
+            <input type="hidden" value="{{zoom_factor}}" name="{{field.id}}_zoom_factor" id="{{field.id}}_zoom_factor"/>
+            <input type="hidden" value="{{canvas_w}}" name="{{field.id}}_canvas_w" id="{{field.id}}_canvas_w"/>
+            <input type="hidden" value="{{canvas_h}}" name="{{field.id}}_canvas_h" id="{{field.id}}_canvas_h"/>
+            <input type="hidden" value="{{image_path}}" name="{{field.id}}_img_url" id="{{field.id}}_img_url"/>
+            <canvas id="var_{{field.id}}_img_canvas" width="{{canvas_w}}" height="{{canvas_h}}">
+                    <!--style="border: 1px solid #d3d3d3; background:url('{{ image_path }}');background-size:{{canvas_w}}px {{canvas_h}}px; background-repeat:no-repeat;">-->
+                <strong>Your browser does not support HTML5 canvas, hence the image cannot be cropped. Please consider migrating to a modern browser.</strong>
+            </canvas>
+            <div class="help">
+                The image size is fixed to <strong>{{image_size.width}} x {{image_size.height}} px</strong>. Crop the image and it will be 
+                automatically zoomed (streched) to the fixed size, keeping the aspect ratio. <br/>
+                The URL of the cropped image will be changed, thus the original image will remain unchanged.<br>
+            </div>
+       </td>
+    </tr>
+{% endif %}
