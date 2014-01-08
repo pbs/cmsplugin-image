@@ -27,8 +27,8 @@ class ImageField(SmartSnippetWidgetBase):
         if image_size:
             image_crops = ImageCrop.objects.filter(variable=self.variable)
             if not image_crops:
-                image_crop = ImageCrop(crop_x=CANVAS_WIDTH/4, crop_y=100, 
-                    crop_w=CANVAS_WIDTH/2, crop_h=200, 
+                image_crop = ImageCrop(crop_x=0, crop_y=0, 
+                    crop_w=CANVAS_WIDTH, crop_h=CANVAS_HEIGHT, 
                     variable_id=self.variable.id)
                 image_crop.save()
             else:
