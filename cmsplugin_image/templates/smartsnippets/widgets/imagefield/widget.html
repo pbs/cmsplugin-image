@@ -274,7 +274,6 @@
         
         // reload the background image of the canvas to the url contained in the input text denoted by url_field_id
         function syncCanvasUrl(canvas_id, url_field_id, url_field_id_old) {
-            console.log('sync canvas url')
             var ss_var = find_ss_var(canvas_id)
             var url_field = document.getElementById(url_field_id)
             var url_field_old = document.getElementById(url_field_id_old)
@@ -301,7 +300,7 @@
                         else
                             ss_var.canvas_w = img_w
                         ss_var.canvas_h = (ss_var.canvas_w / aspect_ratio).toFixed(2)
-                        ss_var.zoom_factor = (img_w / ss_var.canvas_w).toFixed(5)
+                        ss_var.zoom_factor = img_w / ss_var.canvas_w
                         ss_var.canvas.width = ss_var.canvas_w
                         ss_var.canvas.height = ss_var.canvas_h
                         ss_var.img.src = img_url
@@ -310,8 +309,9 @@
                         ss_var.crop_area.y = 0
                         ss_var.crop_area.w = ss_var.canvas_w
                         ss_var.crop_area.h = ss_var.canvas_h
-                        new_img.parentNode.removeChild(new_img)
+                        syncCropModel(ss_var)
                         paint(ss_var.canvas)
+                        new_img.parentNode.removeChild(new_img)
                     }
                     new_img.onerror = function() {
                         url_field.value = ss_var.img.src
@@ -381,6 +381,7 @@
                 ss_var.crop_area.y = parseFloat(ss_var.crop_area.y) + parseFloat(ss_var.crop_area.h)
                 ss_var.crop_area.h = Math.abs(parseFloat(ss_var.crop_area.h))
             }
+            // take care of nearly-0 width/height
             var h = ss_var.crop_area.h * ss_var.zoom_factor
             var w = ss_var.crop_area.w * ss_var.zoom_factor
             if (h < 1)
