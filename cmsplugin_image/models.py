@@ -85,7 +85,7 @@ class ImageSizeContextManager(models.Manager):
                 img_ctx.save()
         elif image_size:
             img_ctx = ImageSizeContext(content_object=model_instance,
-                                   image_size=image_size)
+                image_size=image_size)
             img_ctx.save()
 
     def get_img_ctx(self, model_instance):
@@ -104,11 +104,12 @@ class ImageSizeContextManager(models.Manager):
 
 
 class ImageSizeContext(models.Model):
+    """ This model indirectly links a SmartSnippetVariable to an ImageSize
+        via the GenericForeignKey mechanism.
+    """
     image_size = models.ForeignKey(ImageSize, blank=True, null=True)
 
-    # The standard fields for a GenericForeignKey.
-    # It may points to whatever model object without
-    # hard-coding the class of the related model
+    # The standard fields for a GenericForeignKey
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField()
     content_object = generic.GenericForeignKey('content_type', 'object_id')
@@ -122,7 +123,8 @@ class ImageSizeContext(models.Model):
 #noinspection PyUnusedLocal,PyUnresolvedReferences
 @receiver(pre_delete, sender=SmartSnippetVariable, dispatch_uid='ss_dispatch')
 def delete_img_context(sender, instance, **kwargs):
-    """ Delete the imgSize_context entries which are indirectly linked (Generic_FK) to the SmartSnippetVariable
+    """ Delete the imgSize_context entries which are indirectly linked 
+    (Generic_FK) to the SmartSnippetVariable
     """
     for obj in ImageSizeContext.objects.get_by_object_id(instance.id):
         obj.delete()
