@@ -235,6 +235,7 @@ def try_to_guess_extension(img):
 
 def store_image(img, filename):
     """ Save the given PIL image using the FILER_PUBLICMEDIA_STORAGE
+        Note: only the storage entry is created (no DB metadata);
     """
     img_data = cStringIO.StringIO()
     img.save(img_data, format=img.format)
