@@ -243,5 +243,5 @@ def store_image(img, filename):
     img_file = InMemoryUploadedFile(img_data, None, filename, 
         'image/%s' % img.format, img_data_size, None)
     key_name = CROPPED_PREFIX + '/' + filename
-    filer_storage.save(filename, key_name)
+    filer_storage.save(key_name, img_file)
     return filer_storage.url(key_name)
