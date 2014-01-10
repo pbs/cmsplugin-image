@@ -1,21 +1,38 @@
-from django.template.loader import render_to_string
-from django.template import RequestContext
-from django.core.signals import request_finished
-from django.dispatch import receiver
-from smartsnippets.widgets_pool import widget_pool
-from smartsnippets.widgets_base import SmartSnippetWidgetBase
-from models import ImageSize, ImageSizeContext, ImageSizeContextManager, ImageCrop
-from smartsnippets.models import SmartSnippetVariable
-from PIL import Image, ImageFile
-from boto.s3.connection import S3Connection
-from boto.s3.key import Key
-from cmsplugin_image.settings import S3_CROPPED_PREFIX, S3_FILER_STORAGE
-from django.conf import settings
 import os
 import cStringIO
 import urllib
 import datetime
 import math
+
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.template.loader import render_to_string
+from django.template import RequestContext
+from django.core.signals import request_finished
+from django.dispatch import receiver
+from cmsplugin_image.settings import CROPPED_PREFIX
+from PIL import Image, ImageFile
+
+#from django.conf import settings
+from smartsnippets.widgets_pool import widget_pool
+from smartsnippets.widgets_base import SmartSnippetWidgetBase
+from models import ImageSize, ImageSizeContext, ImageSizeContextManager, ImageCrop
+from smartsnippets.models import SmartSnippetVariable
+from filer.settings import FILER_PUBLICMEDIA_STORAGE as filer_storage
+try:
+    from smartsnippets.signals import smartsnippet_var_saved
+except ImportError:
+    smartsnippet_var_saved = None       
+
+
+# the size of the canvas for ImageFields which have a fixed size
+CANVAS_WIDTH=600
+CANVAS_HEIGHT=400
+
+
+# tokens used for cropped images file name generation
+SEP = '__'
+CROP = SEP + 'crop' + SEP
+UNKNOWN_EXTENSION = "##invalid##"
 
 
 class ImageField(SmartSnippetWidgetBase):
@@ -35,7 +52,8 @@ class ImageField(SmartSnippetWidgetBase):
                 image_crop = image_crops[0]
         # we want to show the original image, not the cropped one 
         # (if the image was already cropped)
-        image_path = image_crop.original_path if image_crop and image_crop.original_path else self.variable.value
+        image_path = image_crop.original_path if image_crop and \
+            image_crop.original_path else self.variable.value
         canvas_w, canvas_h, zoom_factor = get_width_height_zoom(image_path)
         return {'field': self.variable,
                 'value_dict': self.formatted_value,
@@ -71,10 +89,6 @@ class OptionalImageField(ImageField):
 widget_pool.register_widget(OptionalImageField)
 
 
-CANVAS_WIDTH=600
-CANVAS_HEIGHT=400
-
-
 def get_width_height_zoom(image_path):
     """ Calculate the area of the canvas and the zoom_factor 
     (for factoring the crop)
@@ -94,16 +108,10 @@ def get_width_height_zoom(image_path):
 def get_image_size(smartsnippet_variable):
     smartsnippet_var = SmartSnippetVariable.objects.filter(
         id=smartsnippet_variable.snippet_variable_id)[0]
-    img_context = ImageSizeContext.objects.get_img_ctx(smartsnippet_var)
+    img_context = ImageSizeContext.objects.get_image_context(smartsnippet_var)
     if img_context:
         return img_context.image_size
     return None
-
-
-try:
-    from smartsnippets.signals import smartsnippet_var_saved
-except ImportError:
-    smartsnippet_var_saved = None       
 
 
 def load_image(image_path):
@@ -116,6 +124,9 @@ def load_image(image_path):
 
 @receiver(smartsnippet_var_saved)
 def persist_image_crop(sender, request, **kwargs):
+    """ When a smartsnippet variable is saved, we may want to also save the crop info
+        (if ss_var is an image and it has a fixed size)
+    """
     image_crops = ImageCrop.objects.filter(variable=sender)
     image_size = get_image_size(sender)
     if not image_crops or not image_crops[0] or not image_size:
@@ -132,16 +143,15 @@ def persist_image_crop(sender, request, **kwargs):
         image_crop.crop_y = int(round(float(crop_y), 1))
         image_crop.crop_w = int(round(float(crop_w), 1))
         image_crop.crop_h = int(round(float(crop_h), 1))
+        # we want to keep the path to the original image (usually a URL)
         if not CROP in sender.value:
             image_crop.original_path = sender.value
         image_crop.save()
+        # overwrite the value of the ss_var
         cropped_img_path = crop_and_save(image_crop.original_path, 
             image_crop, image_size)
         sender.value = cropped_img_path
         sender.save()
-
-
-UNKNOWN_EXTENSION = "##invalid##"
 
 
 def crop_image(img, x1, y1, x2, y2):
@@ -168,11 +178,7 @@ def crop_and_save(image_path, image_crop, image_size):
     cropped_file_name = rename_cropped_file(image_path)
     # it is good to have the correct file extension determined
     cropped_file_name = replace_file_extension(img, cropped_file_name)
-    return save_to_s3(cropped_img, cropped_file_name)
-
-
-SEP = '__'
-CROP = SEP + 'crop' + SEP
+    return store_image(cropped_img, cropped_file_name)
 
 
 def rename_cropped_file(file_path):
@@ -228,21 +234,15 @@ def try_to_guess_extension(img):
         return UNKNOWN_EXTENSION
 
 
-def save_to_s3(img, filename):
-    FILER_STORAGES = getattr(settings, 'FILER_STORAGES')
-    if not FILER_STORAGES:
-        return
-    access_key = FILER_STORAGES[S3_FILER_STORAGE]['main']['OPTIONS']['access_key']
-    secret_key = FILER_STORAGES[S3_FILER_STORAGE]['main']['OPTIONS']['secret_key']
-    bucket_name= FILER_STORAGES[S3_FILER_STORAGE]['main']['OPTIONS']['bucket']
-    conn = S3Connection(access_key, secret_key)
-    bucket = conn.get_bucket(bucket_name)
-    k = Key(bucket, S3_CROPPED_PREFIX + '/' + filename)
-    data = cStringIO.StringIO()
-    img.save(data, img.format)
-    data.seek(0)
-    k.set_contents_from_file(data)
-    # TODO: a way to generate permanent URLs? - poor boto s3 doc
-    return k.generate_url(expires_in=20*365*24*3600, query_auth=True, 
-        force_http=True)
-
+def store_image(img, filename):
+    """ Save the given PIL image using the FILER_PUBLICMEDIA_STORAGE
+    """
+    img_data = cStringIO.StringIO()
+    img.save(img_data, format=img.format)
+    img_data_size = img_data.tell()
+    img_data.seek(0)
+    img_file = InMemoryUploadedFile(img_data, None, filename, 
+        'image/%s' % img.format, img_data_size, None)
+    key_name = CROPPED_PREFIX + '/' + filename
+    filer_storage.save(filename, key_name)
+    return filer_storage.url(key_name)

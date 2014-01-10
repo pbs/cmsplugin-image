@@ -16,5 +16,6 @@ setup(
     license='BSD License',
     setup_requires = ['s3sourceuploader', 
                       'PIL',
+                      'django-filer'
                       ],
 )

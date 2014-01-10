@@ -76,7 +76,7 @@ class ImageCrop(models.Model):
 class ImageSizeContextManager(models.Manager):
 
     def update(self, model_instance, image_size):
-        img_ctx = self.get_img_ctx(model_instance)
+        img_ctx = self.get_image_context(model_instance)
         if img_ctx:
             if not image_size:
                 img_ctx.delete()
@@ -88,7 +88,7 @@ class ImageSizeContextManager(models.Manager):
                 image_size=image_size)
             img_ctx.save()
 
-    def get_img_ctx(self, model_instance):
+    def get_image_context(self, model_instance):
         ct = ContentType.objects.get_for_model(model_instance)
         img_ctx = ImageSizeContext.objects.filter(
             content_type=ct.id,
@@ -96,7 +96,7 @@ class ImageSizeContextManager(models.Manager):
         return img_ctx[0]
 
     def get_image_size(self, model_instance):
-        img_ctx = self.get_img_ctx(model_instance)
+        img_ctx = self.get_image_context(model_instance)
         return img_ctx.image_size.id if img_ctx else None
 
     def get_by_object_id(self, obj_id):
