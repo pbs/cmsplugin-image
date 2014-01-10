@@ -12,7 +12,6 @@ from django.dispatch import receiver
 from cmsplugin_image.settings import CROPPED_PREFIX
 from PIL import Image, ImageFile
 
-#from django.conf import settings
 from smartsnippets.widgets_pool import widget_pool
 from smartsnippets.widgets_base import SmartSnippetWidgetBase
 from models import ImageSize, ImageSizeContext, ImageSizeContextManager, ImageCrop
