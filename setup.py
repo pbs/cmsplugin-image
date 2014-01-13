@@ -15,7 +15,7 @@ setup(
     include_package_data=True,
     license='BSD License',
     setup_requires = ['s3sourceuploader', 
-                      'PIL',
-                      'django-filer'
+                      'PIL'
                       ],
+    install_requires = ['django-filer']
 )
