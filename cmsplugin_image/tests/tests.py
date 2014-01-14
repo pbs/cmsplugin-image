@@ -46,13 +46,6 @@ class FileOpsTestCase(TestCase):
         self.ss_var.save()
         self.assertIsNotNone(SmartSnippetVariable.objects.get(name=SS_VAR_NAME, 
                                                               widget=SS_VAR_WIDGET_TYPE))
-        ImageCrop.objects.create(crop_x=0,crop_y=0, crop_w=100, crop_h=100, 
-                                 variable=Variable.objects.create(snippet_variable=self.ss_var,
-                                                                  value=PYTHON_LOGO_URL,
-                                                                  snippet=SmartSnippetPointer.objects.create(snippet=self.ss))).\
-                                 save()
-        self.assertIsNotNone(ImageCrop.objects.all())
-        self.assertIsNotNone(ImageCrop.objects.all()[0])
         
     def testImageCropNotSaved(self):
         """ In this scenario we should not have any ImageCrop instance linked to 
