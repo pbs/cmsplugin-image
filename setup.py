@@ -5,7 +5,7 @@ README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                            'README.rst')
 
 DEPENDENCIES = [
-      'PIL',
+      'PIL>=1.1.7',
       'Django>=1.3,<1.4.8',
       'django-polymorphic==0.2',
       'django-cms>=2.3.5pbs, <2.3.6',
