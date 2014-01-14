@@ -1,6 +1,6 @@
 # coding=utf-8
 from django.db import models
-from smartsnippets.models import Variable, SmartSnippetVariable
+from smartsnippets.models import Variable, SmartSnippetVariable, SmartSnippetPointer, SmartSnippet
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.dispatch import receiver

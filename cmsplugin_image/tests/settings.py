@@ -13,6 +13,7 @@ INSTALLED_APPS = [
     'south',
     'sekizai',
     'cmsplugin_image',
+    'smartsnippets'
 ]
 
 DATABASES = {
