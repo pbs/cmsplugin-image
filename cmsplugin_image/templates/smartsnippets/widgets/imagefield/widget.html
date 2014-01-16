@@ -1,5 +1,5 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/style.css"/>
-<!--[if lt IE 9]><script type="text/javascript" src="{{STATIC_URL}}/js/excanvas.js"></script><![endif]-->
+<!--[if lt IE 11]><script type="text/javascript" src="{{STATIC_URL}}/js/excanvas.js"></script><![endif]-->
 <!--[if lt IE 9]><script type="text/javascript" src="{{STATIC_URL}}/js/ie8_event.js"></script><![endif]-->
 
 <script type="text/javascript">
@@ -279,9 +279,9 @@
             var url_field_old = document.getElementById(url_field_id_old)
             url_field_old.value = ss_var.img.src
             
-            if (url_field != null && url_field != undefined) {
+            if (url_field) {
                 var img_url = url_field.value
-                if (img_url != null && img_url != undefined) {
+                if (img_url) {
                     // we need the size of the new image
                     var new_img = new Image()
                     new_img.onload = function() {
@@ -333,7 +333,7 @@
 	}
 
         function setValue(fld, val) {
-            if (fld != null && fld != undefined) {
+            if (fld) {
                 fld.value = val
             }
         }
