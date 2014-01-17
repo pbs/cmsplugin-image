@@ -317,7 +317,17 @@
                         url_field.value = ss_var.img.src
                     }
                     new_img.src = img_url
-                } 
+                } else {
+                    ss_var.canvas.width = 600
+                    ss_var.canvas.height = 400
+                    ss_var.img.src = ''
+                    ss_var.crop_area.x = 0
+                    ss_var.crop_area.y = 0
+                    ss_var.crop_area.w = 600
+                    ss_var.crop_area.h = 400
+                    syncCropModel(ss_var)
+                    paint(ss_var.canvas)
+                }
             }
         }
         
