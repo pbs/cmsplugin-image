@@ -16,7 +16,7 @@ from smartsnippets.widgets_pool import widget_pool
 from smartsnippets.widgets_base import SmartSnippetWidgetBase
 from models import ImageSize, ImageSizeContext, ImageSizeContextManager, ImageCrop
 from smartsnippets.models import SmartSnippetVariable
-from filer.settings import FILER_PUBLICMEDIA_STORAGE as filer_storage
+
 try:
     from smartsnippets.signals import ss_plugin_var_saved
 except ImportError:
@@ -105,8 +105,8 @@ def get_width_height_zoom(image_path):
 
 
 def get_image_size(smartsnippet_variable):
-    smartsnippet_var = SmartSnippetVariable.objects.filter(
-        id=smartsnippet_variable.snippet_variable_id)[0]
+    smartsnippet_var = SmartSnippetVariable.objects.get(
+        id=smartsnippet_variable.snippet_variable_id)
     img_context = ImageSizeContext.objects.get_image_context(smartsnippet_var)
     if img_context:
         return img_context.image_size
@@ -137,7 +137,10 @@ def persist_image_crop(sender, request, **kwargs):
     crop_w = request.get(str(sender.id) + '_cropw', '')
     crop_h = request.get(str(sender.id) + '_croph', '')
     
-    if crop_x and crop_y and crop_w and crop_h:
+    if crop_x is not None and \
+       crop_y is not None and \
+       crop_w is not None and \
+       crop_h is not None:
         image_crop.crop_x = int(round(float(crop_x), 1))
         image_crop.crop_y = int(round(float(crop_y), 1))
         image_crop.crop_w = int(round(float(crop_w), 1))
@@ -244,5 +247,6 @@ def store_image(img, filename):
     img_file = InMemoryUploadedFile(img_data, None, filename, 
         'image/%s' % img.format, img_data_size, None)
     key_name = CROPPED_PREFIX + '/' + filename
+    from filer.settings import FILER_PUBLICMEDIA_STORAGE as filer_storage
     filer_storage.save(key_name, img_file)
     return filer_storage.url(key_name)
