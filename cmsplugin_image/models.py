@@ -84,8 +84,8 @@ class ImageSizeContextManager(models.Manager):
                 img_ctx.image_size_id = image_size.id
                 img_ctx.save()
         elif image_size:
-            img_ctx = ImageSizeContext(content_object=model_instance,
-                image_size=image_size)
+            img_ctx = ImageSizeContext(content_object=model_instance, 
+                                       image_size=image_size)
             img_ctx.save()
 
     def get_image_context(self, model_instance):

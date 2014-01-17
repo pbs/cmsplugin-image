@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from smartsnippets.models import SmartSnippet, Variable, SmartSnippetVariable, SmartSnippetPointer
+from smartsnippets.signals import ss_plugin_var_saved
 from ..models import ImageSize, ImageSizeContext, ImageSizeContextManager, ImageCrop
 from django.contrib.sites.models import Site
 
@@ -68,3 +69,34 @@ class FileOpsTestCase(TestCase):
                 if crop.variable == var:
                     found = True
         self.assertFalse(found)
+
+    def testImageCropSaved(self):
+        """ Test whether an ImageCrop instance is created when we save
+            a Variable instance.
+            Note: a 100% correct integration tets would make sure this happens when a 
+            SmartSnippetPlugin is saved (see SmartSnippetPlugin#save_model())
+        """
+        img_size = ImageSize.objects.create(name='size_200_200', width=200, height=200)
+        img_size_ctx = ImageSizeContext.objects.create(image_size=img_size, content_object=self.ss_var)
+        img_size_ctx.save()
+        self.assertIsNotNone(img_size_ctx)
+        
+        ss_pointer = SmartSnippetPointer.objects.create(snippet=self.ss)
+        var = Variable.objects.create(snippet_variable=self.ss_var,
+                                value=PYTHON_LOGO_URL,
+                                snippet=ss_pointer)
+        var.save()
+        self.assertIsNotNone(Variable.objects.get(snippet_variable=self.ss_var,
+                                                  value=PYTHON_LOGO_URL,
+                                                  snippet=ss_pointer))
+
+        request = Client().post('/admin/', {
+                                            '_current_site':168,
+                                            var.id + '_cropx': 0.0, 
+                                            var.id + '_cropy': 0.0, 
+                                            var.id + '_cropw': 60, 
+                                            var.id + '_croph': 60,
+                                            })
+        ss_plugin_var_saved.send(sender=var, request=request)
+        # now the signal mechanism should have created a new ImageCrop
+        self.assertIsNotNone(ImageCrop.objects.get(variable=var))

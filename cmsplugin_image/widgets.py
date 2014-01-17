@@ -18,9 +18,9 @@ from models import ImageSize, ImageSizeContext, ImageSizeContextManager, ImageCr
 from smartsnippets.models import SmartSnippetVariable
 from filer.settings import FILER_PUBLICMEDIA_STORAGE as filer_storage
 try:
-    from smartsnippets.signals import smartsnippet_var_saved
+    from smartsnippets.signals import ss_plugin_var_saved
 except ImportError:
-    smartsnippet_var_saved = None       
+    ss_plugin_var_saved = None       
 
 
 # the size of the canvas for ImageFields which have a fixed size
@@ -121,7 +121,7 @@ def load_image(image_path):
     return img
 
 
-@receiver(smartsnippet_var_saved)
+@receiver(ss_plugin_var_saved)
 def persist_image_crop(sender, request, **kwargs):
     """ When a smartsnippet variable is saved, we may want to also save the crop info
         (if ss_var is an image and it has a fixed size)
