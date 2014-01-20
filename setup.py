@@ -23,7 +23,7 @@ DEPENDENCY_LINKS = [
 
 setup(
     name='cmsplugin-image',
-    version='0.0.8',
+    version='0.0.7',
     description='PBS Image Field type for Django CMS',
     long_description = open(README_PATH, 'r').read(),
     author='PBS Audience Facing Team',
