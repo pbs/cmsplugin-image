@@ -92,7 +92,7 @@ def get_width_height_zoom(image_path):
     """ Calculate the area of the canvas and the zoom_factor 
     (for factoring the crop)
     """
-    img = load_image(image_path) if image_path else None
+    img = load_image(image_path)
     if not img:
         return CANVAS_WIDTH, CANVAS_HEIGHT, 1.0
     (img_width,img_height) = img.size if img else (CANVAS_WIDTH, CANVAS_HEIGHT)
@@ -114,7 +114,10 @@ def get_image_size(smartsnippet_variable):
 
 
 def load_image(image_path):
-    _file = cStringIO.StringIO(urllib.urlopen(image_path).read())
+    _file = cStringIO.StringIO(urllib.urlopen(image_path).read()) \
+        if image_path else None
+    if not _file:
+        return None
     img = Image.open(_file)
     img.load()
     _file.close()
@@ -172,6 +175,8 @@ def resize_image(img, img_size):
 
 def crop_and_save(image_path, image_crop, image_size):
     img = load_image(image_path)
+    if not img:
+        return ''
     cropped_img = crop_image(img, image_crop.crop_x, image_crop.crop_y, 
         image_crop.crop_x + image_crop.crop_w, 
         image_crop.crop_y + image_crop.crop_h)
