@@ -114,9 +114,11 @@ def get_image_size(smartsnippet_variable):
 
 
 def load_image(image_path):
-    _file = cStringIO.StringIO(urllib.urlopen(image_path).read()) \
-        if image_path else None
-    if not _file:
+    if not image_path:
+        return None
+    try:
+        _file = cStringIO.StringIO(urllib.urlopen(image_path).read())
+    except IOError:
         return None
     img = Image.open(_file)
     img.load()
@@ -171,7 +173,7 @@ def resize_image(img, img_size):
     resize_ratio = min(img_size.width / float(w), img_size.height / float(h))
     new_size = int(math.ceil(w * resize_ratio)), int(math.ceil(h * resize_ratio))
     img.thumbnail(new_size, Image.ANTIALIAS)
-    
+
 
 def crop_and_save(image_path, image_crop, image_size):
     img = load_image(image_path)
