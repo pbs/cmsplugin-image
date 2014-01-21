@@ -486,11 +486,16 @@
 <tr>
     <td><label for="var_{{ field.name }}">{{ field.name }}</label></td>
     <td>
+    {% if image_crop and image_size %}
         <input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100"
                class="filer_image_url{% if optional_field %} optional{% endif %}"
                onchange="syncCanvasUrl('var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"
                onpropertychange="propertyChangeIE(event, 'var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"
                onkeyup="keyUpIE(event, 'var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"/>
+    {% else %}
+        <input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100"
+               class="filer_image_url{% if optional_field %} optional{% endif %}"/>
+    {% endif %}
         <a href="{% url admin:filer_folder_changelist %}" class="related-lookup" id="lookup_id_image" title="Lookup"
            onclick="return showRelatedObjectLookupPopupImgField(this, '{{ field.name }}', '{{ size_set_id }}');">
             <img src="{{ STATIC_URL }}admin/img/admin/selector-search.gif" width="16" height="16" alt="Lookup">
@@ -518,7 +523,6 @@
             <input type="hidden" value="{{canvas_h}}" name="{{field.id}}_canvas_h" id="{{field.id}}_canvas_h"/>
             <input type="hidden" value="{{image_path}}" name="{{field.id}}_img_url" id="{{field.id}}_img_url"/>
             <canvas id="var_{{field.id}}_img_canvas" width="{{canvas_w}}" height="{{canvas_h}}">
-                    <!--style="border: 1px solid #d3d3d3; background:url('{{ image_path }}');background-size:{{canvas_w}}px {{canvas_h}}px; background-repeat:no-repeat;">-->
                 <strong>Your browser does not support HTML5 canvas, hence the image cannot be cropped. Please consider migrating to a modern browser.</strong>
             </canvas>
             <div class="help">
