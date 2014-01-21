@@ -118,12 +118,12 @@ def load_image(image_path):
         return None
     try:
         _file = cStringIO.StringIO(urllib.urlopen(image_path).read())
+        img = Image.open(_file)
+        img.load()
+        _file.close()
+        return img
     except IOError:
         return None
-    img = Image.open(_file)
-    img.load()
-    _file.close()
-    return img
 
 
 @receiver(ss_plugin_var_saved)
