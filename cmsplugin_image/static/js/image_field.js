@@ -51,6 +51,7 @@ dismissRelatedImageLookupPopupImgField = function(win, chosenId, chosenThumbnail
                     if (data.url){
 			jQuery("td.invalid_image").html('');
                         jQuery('#var_'+image_field_name).val(data.url);
+                        jQuery('#var_'+image_field_name).change();
                     }
                     else{
                         jQuery("td.error_"+image_field_name).html('Please select a valid image type.');
