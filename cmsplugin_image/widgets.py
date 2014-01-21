@@ -54,8 +54,10 @@ class ImageField(SmartSnippetWidgetBase):
                 image_crop = image_crops[0]
             # we want to show the original image, not the cropped one 
             # (if the image was already cropped)
-            image_path = image_crop.original_path if image_crop and \
-                image_crop.original_path else self.variable.value
+            if image_crop and image_crop.original_path:
+                image_path = image_crop.original_path
+            else:
+                image_path = self.variable.value
             canvas_w, canvas_h, zoom_factor = get_width_height_zoom(image_path)
         return {'field': self.variable,
                 'value_dict': self.formatted_value,
@@ -116,16 +118,36 @@ def get_image_size(smartsnippet_variable):
     return None
 
 
+def open_url(image_path):
+    try:
+        return cStringIO.StringIO(urllib.urlopen(image_path).read())
+    except IOError:
+        return None
+
+
+def open_from_filer(image_path):
+    from filer.settings import FILER_PUBLICMEDIA_STORAGE as filer_storage
+    try:
+        _file = filer_storage.open(image_path)
+    except IOError:
+        return None
+
+
 def load_image(image_path):
     if not image_path:
         return None
+    _file = open_url(image_path)
+    if not _file:
+        _file = open_from_filer(image_path)
+        if not _file:
+            return None
     try:
-        _file = cStringIO.StringIO(urllib.urlopen(image_path).read())
         img = Image.open(_file)
         img.load()
         _file.close()
         return img
     except IOError:
+        # file is not an image or image type is not supported
         return None
 
 
