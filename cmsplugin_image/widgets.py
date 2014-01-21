@@ -40,6 +40,9 @@ class ImageField(SmartSnippetWidgetBase):
     def _get_render_options(self):
         image_size = get_image_size(self.variable)
         image_crop = None
+        image_path = None
+        canvas_w = canvas_h = zoom_factor = 0
+        
         if image_size:
             image_crops = ImageCrop.objects.filter(variable=self.variable)
             if not image_crops:
@@ -49,11 +52,11 @@ class ImageField(SmartSnippetWidgetBase):
                 image_crop.save()
             else:
                 image_crop = image_crops[0]
-        # we want to show the original image, not the cropped one 
-        # (if the image was already cropped)
-        image_path = image_crop.original_path if image_crop and \
-            image_crop.original_path else self.variable.value
-        canvas_w, canvas_h, zoom_factor = get_width_height_zoom(image_path)
+            # we want to show the original image, not the cropped one 
+            # (if the image was already cropped)
+            image_path = image_crop.original_path if image_crop and \
+                image_crop.original_path else self.variable.value
+            canvas_w, canvas_h, zoom_factor = get_width_height_zoom(image_path)
         return {'field': self.variable,
                 'value_dict': self.formatted_value,
                 'image_size': image_size,
