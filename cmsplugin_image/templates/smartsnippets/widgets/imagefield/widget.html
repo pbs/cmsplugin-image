@@ -58,15 +58,19 @@
 	// maximum distance (in pixels) between crop_area edge and mouse position for considering to perform a crop_area resize
 	var THRES = 10
 
+	var TIMESTAMP_SUFFIX = '?timestamp='
+	
 	function paint(ss_var) {
             var canvas = ss_var.canvas
             var ctx = canvas.getContext('2d')
             ctx.clearRect(0, 0, canvas.width, canvas.height)
             ctx.globalAlpha = 1.0
-            ss_var.img.onload = function() {
-                paint(ss_var)
+            if (ss_var.img.src) {
+                ss_var.img.onload = function() {
+                    paint(ss_var)
+                }
+                ctx.drawImage(ss_var.img, 0, 0, ss_var.canvas_w, ss_var.canvas_h)
             }
-            ctx.drawImage(ss_var.img, 0, 0, ss_var.canvas_w, ss_var.canvas_h)
             ctx.globalAlpha = 0.6
             ctx.strokeStyle = "#000000"
             ctx.lineWidth = 4
@@ -245,7 +249,8 @@
         function maximizeCrop(evt) {
             var ss_var = find_ss_var(this.id)
             var canvas=ss_var.canvas
-            if (ss_var.crop_area.x == 0 && ss_var.crop_area.y == 0 && ss_var.crop_area.w == canvas.width && ss_var.crop_area.h == canvas.height) {
+            if (ss_var.crop_area.x == 0 && ss_var.crop_area.y == 0 && 
+            ss_var.crop_area.w == canvas.width && ss_var.crop_area.h == canvas.height) {
                 ss_var.crop_area.x = ss_var.crop_area.old_x
                 ss_var.crop_area.y = ss_var.crop_area.old_y
                 ss_var.crop_area.w = ss_var.crop_area.old_w
@@ -270,6 +275,26 @@
             if (isIE() < 9 && evt.propertyName === 'value') {
                 syncCanvasUrl(canvas_id, url_field_id, url_field_id_old)
             }
+            return preventDefault(evt)
+        }
+        
+        // sync canvas when the URL field is emptied (oninput / onpropertychange not fired in IE lt 10)
+        function keyUpIE(evt, canvas_id, url_field_id, url_field_id_old) {
+            if (isIE() < 10) {
+                var url_field = document.getElementById(url_field_id)
+                if (url_field && !url_field.value) {
+                    syncCanvasUrl(canvas_id, url_field_id, url_field_id_old)
+                }
+            }
+            //return preventDefault(evt)
+        }
+        
+        function removeTimestamp(img_src) {
+            if (!img_src)
+                return img_src
+            if (img_src.indexOf(TIMESTAMP_SUFFIX) != -1)
+                return img_src.substring(0, img_src.lastIndexOf(TIMESTAMP_SUFFIX))
+            return img_src
         }
         
         // reload the background image of the canvas to the url contained in the input text denoted by url_field_id
@@ -277,7 +302,7 @@
             var ss_var = find_ss_var(canvas_id)
             var url_field = document.getElementById(url_field_id)
             var url_field_old = document.getElementById(url_field_id_old)
-            url_field_old.value = ss_var.img.src
+            url_field_old.value = removeTimestamp(ss_var.img.src)
             
             if (url_field) {
                 var img_url = url_field.value
@@ -293,28 +318,27 @@
                             return
                         }
                         
-                        var aspect_ratio = (img_w / img_h).toFixed(2)
+                        var aspect_ratio = img_w / img_h
                         // resize after width, keep aspect ratio
                         if (img_w > 600)
                             ss_var.canvas_w = 600
                         else
                             ss_var.canvas_w = img_w
-                        ss_var.canvas_h = (ss_var.canvas_w / aspect_ratio).toFixed(2)
+                        ss_var.canvas_h = Math.ceil(ss_var.canvas_w / aspect_ratio)
                         ss_var.zoom_factor = img_w / ss_var.canvas_w
                         ss_var.canvas.width = ss_var.canvas_w
                         ss_var.canvas.height = ss_var.canvas_h
-                        ss_var.img.src = img_url
+                        ss_var.img.src = img_url + TIMESTAMP_SUFFIX + new Date().getTime()
                         url_field_old.value = url_field.value
                         ss_var.crop_area.x = 0
                         ss_var.crop_area.y = 0
                         ss_var.crop_area.w = ss_var.canvas_w
                         ss_var.crop_area.h = ss_var.canvas_h
                         syncCropModel(ss_var)
-                        paint(ss_var.canvas)
-                        new_img.parentNode.removeChild(new_img)
+                        paint(ss_var)
                     }
                     new_img.onerror = function() {
-                        url_field.value = ss_var.img.src
+                        url_field.value = removeTimestamp(ss_var.img.src)
                     }
                     new_img.src = img_url
                 } else {
@@ -326,7 +350,7 @@
                     ss_var.crop_area.w = 600
                     ss_var.crop_area.h = 400
                     syncCropModel(ss_var)
-                    paint(ss_var.canvas)
+                    paint(ss_var)
                 }
             }
         }
@@ -441,7 +465,8 @@
                 var crop_w = parseFloat(document.getElementById(field_id + '_cropw').value)
                 var crop_h = parseFloat(document.getElementById(field_id + '_croph').value)
                 var img = new Image()
-                img.src = document.getElementById(field_id + '_img_url').value
+                var field_value = document.getElementById(field_id + '_img_url').value
+                img.src = field_value + TIMESTAMP_SUFFIX + new Date().getTime()
                 var selection_rect = new crop_area((crop_x / zoom_factor).toFixed(2), (crop_y / zoom_factor).toFixed(2), 
                     (crop_w / zoom_factor).toFixed(2), (crop_h / zoom_factor).toFixed(2))
                 var ss_var = new ss_variable(field_id, canvas, selection_rect, canvas_w, canvas_h, zoom_factor, img)
@@ -451,7 +476,6 @@
                 canvas.addEventListener('dblclick', maximizeCrop, false)
                 paint(ss_var)
             }
-            
 	}
 </script>
 
@@ -464,8 +488,9 @@
     <td>
         <input id="var_{{ field.name }}" type="text" name="_{{ field.name }}_" value="{{ field.value }}" size="100"
                class="filer_image_url{% if optional_field %} optional{% endif %}"
-               oninput="syncCanvasUrl('var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"
-               onpropertychange="propertyChangeIE(event, 'var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"/>
+               onchange="syncCanvasUrl('var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"
+               onpropertychange="propertyChangeIE(event, 'var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"
+               onkeyup="keyUpIE(event, 'var_{{field.id}}_img_canvas', 'var_{{ field.name }}', 'var_{{ field.name }}_old')"/>
         <a href="{% url admin:filer_folder_changelist %}" class="related-lookup" id="lookup_id_image" title="Lookup"
            onclick="return showRelatedObjectLookupPopupImgField(this, '{{ field.name }}', '{{ size_set_id }}');">
             <img src="{{ STATIC_URL }}admin/img/admin/selector-search.gif" width="16" height="16" alt="Lookup">
@@ -500,6 +525,9 @@
                 The image size is fixed to <strong>{{image_size.width}} x {{image_size.height}} px</strong>. Crop the image and it will be 
                 automatically zoomed (streched) to the fixed size, keeping the aspect ratio. <br/>
                 The URL of the cropped image will be changed, thus the original image will remain unchanged.<br>
+                Please note that the <strong>initial crop area is 100% x 100%</strong> (the whole image). You can drag the margins of the image in order to change
+                the crop selection. 
+                <br/>Then simply drag the crop area for moving it around.
             </div>
        </td>
     </tr>
