@@ -58,6 +58,8 @@
 	// maximum distance (in pixels) between crop_area edge and mouse position for considering to perform a crop_area resize
 	var THRES = 10
 
+	var TIMESTAMP_SUFFIX = '#timestamp'
+	
 	function paint(ss_var) {
             var canvas = ss_var.canvas
             var ctx = canvas.getContext('2d')
@@ -287,12 +289,20 @@
             //return preventDefault(evt)
         }
         
+        function removeTimestamp(img_src) {
+            if (!img_src)
+                return img_src
+            if (img_src.indexOf(TIMESTAMP_SUFFIX) != -1)
+                return img_src.substring(0, img_src.lastIndexOf(TIMESTAMP_SUFFIX))
+            return img_src
+        }
+        
         // reload the background image of the canvas to the url contained in the input text denoted by url_field_id
         function syncCanvasUrl(canvas_id, url_field_id, url_field_id_old) {
             var ss_var = find_ss_var(canvas_id)
             var url_field = document.getElementById(url_field_id)
             var url_field_old = document.getElementById(url_field_id_old)
-            url_field_old.value = ss_var.img.src
+            url_field_old.value = removeTimestamp(ss_var.img.src)
             
             if (url_field) {
                 var img_url = url_field.value
@@ -318,7 +328,7 @@
                         ss_var.zoom_factor = img_w / ss_var.canvas_w
                         ss_var.canvas.width = ss_var.canvas_w
                         ss_var.canvas.height = ss_var.canvas_h
-                        ss_var.img.src = img_url
+                        ss_var.img.src = img_url + TIMESTAMP_SUFFIX + new Date().getTime()
                         url_field_old.value = url_field.value
                         ss_var.crop_area.x = 0
                         ss_var.crop_area.y = 0
@@ -326,10 +336,9 @@
                         ss_var.crop_area.h = ss_var.canvas_h
                         syncCropModel(ss_var)
                         paint(ss_var)
-                        new_img.parentNode.removeChild(new_img)
                     }
                     new_img.onerror = function() {
-                        url_field.value = ss_var.img.src
+                        url_field.value = removeTimestamp(ss_var.img.src)
                     }
                     new_img.src = img_url
                 } else {
@@ -456,7 +465,8 @@
                 var crop_w = parseFloat(document.getElementById(field_id + '_cropw').value)
                 var crop_h = parseFloat(document.getElementById(field_id + '_croph').value)
                 var img = new Image()
-                img.src = document.getElementById(field_id + '_img_url').value
+                var field_value = document.getElementById(field_id + '_img_url').value
+                img.src = field_value + TIMESTAMP_SUFFIX + new Date().getTime()
                 var selection_rect = new crop_area((crop_x / zoom_factor).toFixed(2), (crop_y / zoom_factor).toFixed(2), 
                     (crop_w / zoom_factor).toFixed(2), (crop_h / zoom_factor).toFixed(2))
                 var ss_var = new ss_variable(field_id, canvas, selection_rect, canvas_w, canvas_h, zoom_factor, img)
@@ -466,7 +476,6 @@
                 canvas.addEventListener('dblclick', maximizeCrop, false)
                 paint(ss_var)
             }
-            
 	}
 </script>
 
