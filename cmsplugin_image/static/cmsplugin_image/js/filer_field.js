@@ -42,9 +42,9 @@
                         success: function(data){
                             var field = $('#var_' + fieldName);
                             field.val(data.url || field.val());
-                            $("td.error_" + fieldName).html(data.url? '': 'Please select a valid image type.')
+                            $("td.error_" + fieldName).html(data.url? '': 'Please select a valid ' + fileType + ' type.')
                         },
-                        error: function(data){
+                        error: function(){
                             alert('Error retrieving file information.');
                         }
                     });
@@ -75,9 +75,8 @@
                         return ;
                     }
                     if (isEmpty || !is_validURL(fieldValue)){
-                        errorBox.html('Please select a valid image type.');
+                        errorBox.html('Please select a valid ' + $(this).attr('data-filetype') + ' type.');
                         is_valid = false;
-                        return ;
                     }
                });
                return is_valid;

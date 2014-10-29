@@ -1,8 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.http import (
-    HttpResponse, HttpResponseForbidden, HttpResponseBadRequest)
-from django.shortcuts import get_object_or_404
-from filer.models import File, Image
+    HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, Http404)
+from cmsplugin_image.widgets import FILER_WIDGETS
+from filer.models import File
 
 try:
     import json
@@ -19,17 +19,25 @@ def get_file(request):
     except (TypeError, ValueError):
         return HttpResponseBadRequest('Filer file missing or not a number')
 
-    file_type = (request.GET.get('file_type') or 'image').lower()
-    available_models = {
-        'image': Image,
-        'file': File
-    }
-    model = available_models.get(file_type)
-    if not model:
-        return HttpResponseBadRequest("File type not available.")
+    file_type = (
+        request.GET.get('file_type') or 'image'
+    ).strip().lower()
 
-    filer_object = get_object_or_404(model, id=file_id)
-    file_url = filer_object.file.url
+    if file_type not in [widget.filer_file_type for widget in FILER_WIDGETS]:
+        return HttpResponseBadRequest('File type not available.')
+
+    exact_requested = file_type != 'file'
+
+    try:
+        filer_object = File.objects.get(id=file_id)
+    except File.DoesNotExist:
+        raise Http404
+
+    type_matches = filer_object.file_type.lower() == file_type
+
+    file_url = ""
+    if (exact_requested and type_matches or not exact_requested):
+        file_url = filer_object.file.url
 
     return HttpResponse(
         json.dumps({'url': file_url}), mimetype="application/json")
