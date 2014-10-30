@@ -26,18 +26,18 @@ def get_file(request):
     if file_type not in [widget.filer_file_type for widget in FILER_WIDGETS]:
         return HttpResponseBadRequest('File type not available.')
 
-    exact_requested = file_type != 'file'
-
     try:
         filer_object = File.objects.get(id=file_id)
     except File.DoesNotExist:
         raise Http404
 
-    type_matches = filer_object.file_type.lower() == file_type
+    filer_object_type = filer_object.file_type.lower()
 
-    file_url = ""
-    if (exact_requested and type_matches or not exact_requested):
-        file_url = filer_object.file.url
+    is_image = file_type == filer_object_type == 'image'
+    # allow all other file types different than image since we don't have
+    #   an archive snippet field yet
+    is_file = file_type == 'file' and filer_object_type != 'image'
+    file_url = filer_object.file.url if is_image or is_file else ""
 
     return HttpResponse(
         json.dumps({'url': file_url}), mimetype="application/json")
