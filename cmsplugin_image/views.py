@@ -15,7 +15,7 @@ def get_file(request):
     if not request.is_ajax():
         return HttpResponseForbidden()
     try:
-        file_id = int(request.GET.get('id', None))
+        file_id = int(request.GET.get('id'))
     except (TypeError, ValueError):
         return HttpResponseBadRequest('Filer file missing or not a number')
 
