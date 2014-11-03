@@ -1,3 +1,5 @@
+import os
+
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -6,6 +8,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.admin',
+    'mptt',
+    'easy_thumbnails',
+    'sekizai',
+    'smartsnippets',
+    'cms',
     'filer',
     'cmsplugin_image',
 ]
@@ -22,3 +29,11 @@ DATABASES = {
 }
 
 ROOT_URLCONF = 'cmsplugin_image.tests.urls'
+HERE = os.path.dirname(os.path.realpath(__file__))
+MEDIA_ROOT = os.path.abspath( os.path.join(HERE, 'media') )
+MEDIA_URL = '/media/'
+STATIC_URL = '/static/'
+
+TEMPLATE_CONTEXT_PROCESSORS = (
+    'django.core.context_processors.request',
+)
