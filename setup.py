@@ -11,15 +11,15 @@ DEPENDENCIES = [
 
 
 DEPENDENCY_LINKS = [
-    'http://github.com/pbs/django-cms-smartsnippets/tarball/master#egg=django-cms-smartsnippets-0.2.0.dev',
+    'http://github.com/pbs/django-cms-smartsnippets/tarball/master#egg=django-cms-smartsnippets-0.5.0.dev',
 ]
 
 
 setup(
     name='cmsplugin-image',
-    version='0.1.0',
+    version='0.2.0',
     description='PBS Image Field type for Django CMS',
-    long_description = open(README_PATH, 'r').read(),
+    long_description=open(README_PATH, 'r').read(),
     author='PBS Audience Facing Team',
     author_email='tpg-pbs-userfacing@threepillarglobal.com',
     install_requires=DEPENDENCIES,
@@ -27,5 +27,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     license='BSD License',
-    setup_requires = ['s3sourceuploader',],
+    setup_requires=['s3sourceuploader', ],
 )
