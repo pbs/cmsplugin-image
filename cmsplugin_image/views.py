@@ -1,13 +1,14 @@
 from django.contrib.auth.decorators import login_required
 from django.http import (
     HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, Http404)
-from cmsplugin_image.widgets import FILER_WIDGETS
 from filer.models import File
 
 try:
     import json
 except:
     import simplejson as json
+
+ALLOWED_FILE_TYPES = ['file', 'image']
 
 
 @login_required
@@ -23,7 +24,7 @@ def get_file(request):
         request.GET.get('file_type') or 'image'
     ).strip().lower()
 
-    if file_type not in [widget.filer_file_type for widget in FILER_WIDGETS]:
+    if file_type not in ALLOWED_FILE_TYPES:
         return HttpResponseBadRequest('File type not available.')
 
     try:
