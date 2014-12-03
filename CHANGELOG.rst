@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+Revision 080c202 (03.12.2014, 15:07 UTC)
+----------------------------------------
+
+* LUN-1970
+
+  * remove unused snippet widgets
+
+* Misc commits
+
+  * fixed wrong import
+
 Revision a9d27e2 (03.11.2014, 15:27 UTC)
 ----------------------------------------
 
