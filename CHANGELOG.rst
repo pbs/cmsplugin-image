@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+Revision 9be0999 (17.07.2015, 14:09 UTC)
+----------------------------------------
+
+No new issues.
+
+* Misc commits
+
+  * tox: Don't allow django 1.8 prereleases
+  * Django 1.7 upgrade: fixed tests & deprecation warnings
+  * Django 1.6 upgrade: fixed imports
+
 Revision 080c202 (03.12.2014, 15:07 UTC)
 ----------------------------------------
 
