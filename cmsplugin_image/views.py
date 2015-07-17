@@ -41,4 +41,4 @@ def get_file(request):
     file_url = filer_object.file.url if is_image or is_file else ""
 
     return HttpResponse(
-        json.dumps({'url': file_url}), mimetype="application/json")
+        json.dumps({'url': file_url}), content_type="application/json")
