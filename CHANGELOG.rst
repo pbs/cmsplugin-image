@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+Revision 0e8b9c9 (24.09.2015, 13:13 UTC)
+----------------------------------------
+
+No new issues.
+
+* Misc commits
+
+  * Restrict django-filer for tests.
+  * Django 1.8 upgrade: updated test settings
+
 Revision 9be0999 (17.07.2015, 14:09 UTC)
 ----------------------------------------
 
