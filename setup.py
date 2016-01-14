@@ -12,7 +12,7 @@ DEPENDENCIES = [
 
 setup(
     name='cmsplugin-image',
-    version='1.1.0',
+    version='1.1.1',
     description='PBS Image Field type for Django CMS',
     long_description=open(README_PATH, 'r').read(),
     author='PBS Audience Facing Team',
