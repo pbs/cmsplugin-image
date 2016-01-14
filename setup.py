@@ -6,12 +6,7 @@ README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)),
 
 DEPENDENCIES = [
     'django-cms-smartsnippets',
-    'django-filer',
-]
-
-
-DEPENDENCY_LINKS = [
-    'http://github.com/pbs/django-cms-smartsnippets/tarball/master#egg=django-cms-smartsnippets-0.5.0.dev',
+    "django-filer >= 0.9pbs, <0.9.1"
 ]
 
 
@@ -23,7 +18,6 @@ setup(
     author='PBS Audience Facing Team',
     author_email='tpg-pbs-userfacing@threepillarglobal.com',
     install_requires=DEPENDENCIES,
-    dependency_links=DEPENDENCY_LINKS,
     packages=find_packages(),
     include_package_data=True,
     license='BSD License',
