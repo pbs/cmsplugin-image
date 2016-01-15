@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+Revision 9e4ecd6 (15.01.2016, 08:01 UTC)
+----------------------------------------
+
+No new issues.
+
+* Misc commits
+
+  * Specify django-filer version.
+
 Revision 0e8b9c9 (24.09.2015, 13:13 UTC)
 ----------------------------------------
 
