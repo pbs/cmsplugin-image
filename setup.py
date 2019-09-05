@@ -5,14 +5,13 @@ README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                            'README.rst')
 
 DEPENDENCIES = [
-    'django-cms-smartsnippets',
     "django-filer >= 0.9pbs, <0.9.1"
 ]
 
 
 setup(
     name='cmsplugin-image',
-    version='1.1.1',
+    version='2.0.0',
     description='PBS Image Field type for Django CMS',
     long_description=open(README_PATH, 'r').read(),
     author='PBS Audience Facing Team',
