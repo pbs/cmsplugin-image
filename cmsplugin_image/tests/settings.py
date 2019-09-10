@@ -10,9 +10,6 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'mptt',
     'easy_thumbnails',
-    'sekizai',
-    'smartsnippets',
-    'cms',
     'filer',
     'cmsplugin_image',
 ]
