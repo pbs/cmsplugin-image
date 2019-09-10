@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+Revision e12df80 (10.09.2019, 11:35 UTC)
+----------------------------------------
+
+No new issues.
+
+* Misc commits
+
+  * tests-fix1: remove sekizai, cms and smartsnippets from installed apps
+
 Revision 82a7d97 (06.11.2018, 13:21 UTC)
 ----------------------------------------
 
